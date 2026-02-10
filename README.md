@@ -630,7 +630,10 @@ To request a new API key or change your rate limit, contact the Switch team (see
 For API key requests, integration help, or feature requests, contact the Switch team:
 
 - **Website:** [switch.win](https://switch.win)
-- **Telegram:** Contact team for support channels
+- **Telegram:**
+  - [@BrandonDavisR2R](https://t.me/BrandonDavisR2R)
+  - [@bttscott](https://t.me/bttscott)
+  - [@shanebtt](https://t.me/shanebtt)
 
 ---
 
