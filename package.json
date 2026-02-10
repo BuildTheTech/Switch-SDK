@@ -1,0 +1,37 @@
+{
+  "name": "@switch-win/sdk",
+  "version": "1.0.0",
+  "description": "Official integration kit for the Switch DEX Aggregator on PulseChain — types, constants, ABIs, and examples",
+  "author": "BuildTheTech",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/BuildTheTech/Switch-SDK.git"
+  },
+  "keywords": [
+    "switch",
+    "dex",
+    "aggregator",
+    "pulsechain",
+    "swap",
+    "defi",
+    "sdk"
+  ],
+  "type": "module",
+  "main": "src/index.js",
+  "types": "src/index.d.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./types": "./src/types.ts",
+    "./constants": "./src/constants.ts",
+    "./abi": "./abi/SwitchRouterABI.json"
+  },
+  "files": [
+    "src/",
+    "abi/",
+    "README.md"
+  ],
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
