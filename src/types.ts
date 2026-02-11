@@ -42,9 +42,40 @@ export interface BestPathResponse {
   routeAllocation?: RouteAllocationPlan;
   /** Ready-to-send transaction. Only present when `sender` query param is provided. */
   tx?: SwapTransaction;
+  /**
+   * Transfer tax info for the input token.
+   * Present when the API detects whether the token has a fee-on-transfer mechanism.
+   */
+  fromTokenTax?: TokenTaxResponse;
+  /**
+   * Transfer tax info for the output token.
+   * Present when the API detects whether the token has a fee-on-transfer mechanism.
+   * If `toTokenTax.isTaxToken` is true, `minAmountOut` already accounts for the buy tax.
+   */
+  toTokenTax?: TokenTaxResponse;
 }
 
 // ── Transaction ─────────────────────────────────────────────────────
+
+/** Transfer tax information for a token (fee-on-transfer) */
+export interface TokenTaxResponse {
+  /** Whether this token has a transfer tax */
+  isTaxToken: boolean;
+  /**
+   * Buy tax in basis points.
+   * Applied when the token is acquired (i.e. when it is the output token).
+   * For example, 500 = 5% buy tax.
+   */
+  buyTaxBps: number;
+  /**
+   * Sell tax in basis points.
+   * Applied when the token is sold (i.e. when it is the input token).
+   * For example, 500 = 5% sell tax.
+   */
+  sellTaxBps: number;
+}
+
+// ── Transaction (on-chain) ──────────────────────────────────────────
 
 /** Transaction object ready to be sent on-chain via `signer.sendTransaction()` */
 export interface SwapTransaction {

@@ -35,12 +35,13 @@ Switch-SDK/
 4. [Executing a Swap](#executing-a-swap)
 5. [Important Notes](#important-notes)
 6. [Response Schema](#response-schema)
-7. [Error Handling](#error-handling)
-8. [Partner Fee Sharing](#partner-fee-sharing)
-9. [Constants & Addresses](#constants--addresses)
-10. [Full Integration Examples](#full-integration-examples)
-11. [Rate Limits](#rate-limits)
-12. [Support](#support)
+7. [Tax Tokens (Fee-on-Transfer)](#tax-tokens-fee-on-transfer)
+8. [Error Handling](#error-handling)
+9. [Partner Fee Sharing](#partner-fee-sharing)
+10. [Constants & Addresses](#constants--addresses)
+11. [Full Integration Examples](#full-integration-examples)
+12. [Rate Limits](#rate-limits)
+13. [Support](#support)
 
 ---
 
@@ -160,8 +161,10 @@ GET /swap/quote?from=0xA1077a294dDE1B09bB078844df40758a5D0f9a27&to=0x95B303987A6
   "toToken": "0x95B303987A60C71504D99Aa1b13B4DA07b0790ab",
   "totalAmountIn": "1000000000000000000",
   "totalAmountOut": "52934810000000000000",
-  "minAmountOut": "52405461900000000000",   // totalAmountOut adjusted for fee + slippage
+  "minAmountOut": "52405461900000000000",   // totalAmountOut adjusted for tax + fee + slippage
   "splitStrategy": "dual-route",
+  "fromTokenTax": { "isTaxToken": false, "buyTaxBps": 0, "sellTaxBps": 0 },
+  "toTokenTax":   { "isTaxToken": false, "buyTaxBps": 0, "sellTaxBps": 0 },
   "paths": [ /* ... detailed path info ... */ ],
   "routeAllocation": {
     "amountIn": "1000000000000000000",
@@ -273,6 +276,45 @@ That's it. The `tx.data` already encodes the correct `goSwitch()` call with your
 
 ## Important Notes
 
+### Tax Tokens (Fee-on-Transfer)
+
+Some tokens on PulseChain charge a percentage fee on every `transfer()` call — commonly called **tax tokens** or **fee-on-transfer tokens**. When you swap into or out of one of these tokens, the actual amount received differs from the quoted DEX output because the token's own contract skims a fee during the transfer.
+
+The API automatically detects tax tokens and returns the tax rates in the response:
+
+```jsonc
+{
+  // Selling a 5% sell-tax token
+  "fromTokenTax": { "isTaxToken": true, "buyTaxBps": 500, "sellTaxBps": 500 },
+  // Buying a non-tax token
+  "toTokenTax":   { "isTaxToken": false, "buyTaxBps": 0, "sellTaxBps": 0 },
+  // minAmountOut already accounts for the sell tax
+  "minAmountOut": "..."
+}
+```
+
+**How it affects `minAmountOut`:**
+
+- If `fromToken` is a tax token, its **sell tax** reduces the effective input reaching the DEX pools.
+- If `toToken` is a tax token, its **buy tax** reduces what the user ultimately receives.
+- Both taxes (if applicable) are factored into `minAmountOut` *before* slippage, so the transaction won't revert unexpectedly.
+
+**UI recommendations:**
+
+- Display a warning badge when `fromTokenTax.isTaxToken` or `toTokenTax.isTaxToken` is `true`.
+- Show the tax percentage to the user (e.g. "5 % buy tax") so they understand the impact on their trade.
+- Consider automatically increasing slippage tolerance for tax token swaps and adjusting your UI's slippage indicator to reflect this — e.g. showing "Slippage: 5.5 % (includes 5 % token tax)" — so users understand why slippage is higher than their default setting.
+
+```ts
+import type { BestPathResponse, TokenTaxResponse } from "@switch-win/sdk/types";
+
+function getEffectiveTaxBps(quote: BestPathResponse): number {
+  const sellTax = quote.fromTokenTax?.sellTaxBps ?? 0;
+  const buyTax  = quote.toTokenTax?.buyTaxBps ?? 0;
+  return sellTax + buyTax; // simplified; actual math compounds but this is close enough for display
+}
+```
+
 ### Quote Freshness
 
 Quotes reflect current on-chain liquidity and are **cached for ~10 seconds**. DEX prices can shift between when you fetch a quote and when the transaction lands on-chain — this is what `minAmountOut` (slippage protection) guards against.
@@ -358,11 +400,13 @@ If the transaction reverts, the SwitchRouter contract returns one of these custo
 | `toToken` | `string` | Output token address |
 | `totalAmountIn` | `string` | Total input amount in wei |
 | `totalAmountOut` | `string` | Expected output amount in wei (before fee and slippage) |
-| `minAmountOut` | `string` | Minimum acceptable output after fee and slippage: `totalAmountOut × (10000 − feeBps) / 10000 × (10000 − slippageBps) / 10000`. This is the value encoded in the `tx` calldata as `_minTotalAmountOut`. |
+| `minAmountOut` | `string` | Minimum acceptable output after token taxes, fee, and slippage. When tax tokens are involved: `totalAmountOut × (10000 − sellTaxBps) / 10000 × (10000 − feeBps) / 10000 × (10000 − buyTaxBps) / 10000 × (10000 − slippageBps) / 10000`. This is the value encoded in the `tx` calldata as `_minTotalAmountOut`. |
 | `splitStrategy` | `string` | Routing strategy used (e.g. `"single-route"`, `"dual-route"`) |
 | `paths` | `SwapPath[]` | Human-readable path descriptions |
 | `routeAllocation` | `RouteAllocationPlan` | Structured route breakdown (matches on-chain structs) |
 | `tx` | `SwapTransaction?` | Ready-to-send transaction. Only present when `sender` is provided. |
+| `fromTokenTax` | `TokenTaxResponse?` | Transfer tax info for the input token. See [Tax Tokens](#tax-tokens-fee-on-transfer). |
+| `toTokenTax` | `TokenTaxResponse?` | Transfer tax info for the output token. See [Tax Tokens](#tax-tokens-fee-on-transfer). |
 
 ### `SwapPath`
 
@@ -396,6 +440,18 @@ A human-readable summary of each route split. Useful for display purposes (e.g. 
 | `to` | `string` | SwitchRouter contract address |
 | `data` | `string` | ABI-encoded `goSwitch()` calldata |
 | `value` | `string` | Native PLS to send (wei). `"0"` for ERC-20 input tokens. |
+
+### `TokenTaxResponse`
+
+Present on every quote response as `fromTokenTax` and `toTokenTax`. Reports whether each token charges a fee on transfer ("tax token").
+
+| Field | Type | Description |
+|---|---|---|
+| `isTaxToken` | `boolean` | `true` if the token has a non-zero transfer tax |
+| `buyTaxBps` | `number` | Buy tax in basis points — applied when the token is *acquired* (i.e. it is the output token). `500` = 5 %. |
+| `sellTaxBps` | `number` | Sell tax in basis points — applied when the token is *sold* (i.e. it is the input token). `500` = 5 %. |
+
+> When a tax token is involved, `minAmountOut` already accounts for the tax so the on-chain slippage check passes correctly.
 
 ### `RouteAllocationPlan`
 
@@ -445,7 +501,7 @@ Errors are returned as JSON with an `error` field:
 | `400` | Invalid parameters (missing, malformed, out of range) |
 | `401` | Missing API key |
 | `403` | Invalid API key |
-| `429` | Rate limit exceeded |
+| `429` | Rate limit exceeded (per-key total **or** per-IP sub-limit) |
 | `502` | Backend routing failure |
 
 ### Common Error Messages
@@ -545,31 +601,61 @@ function shouldFeeOnOutput(fromToken: string, toToken: string): boolean {
 }
 ```
 
-#### 4. Combination strategy (recommended)
+#### 4. Avoid collecting tax tokens
+
+If one side of the swap is a tax token, take the fee from the *other* side. Collecting a tax token as fee means the transfer tax eats into your fee revenue.
+
+```ts
+import type { BestPathResponse } from "@switch-win/sdk/types";
+
+function shouldFeeOnOutput(quote: BestPathResponse): boolean {
+  const fromIsTax = quote.fromTokenTax?.isTaxToken ?? false;
+  const toIsTax   = quote.toTokenTax?.isTaxToken ?? false;
+  // Selling a tax token → fee on output (collect the non-tax output token)
+  if (fromIsTax && !toIsTax) return true;
+  // Buying a tax token → fee on input (collect the non-tax input token)
+  if (toIsTax && !fromIsTax) return false;
+  // Both or neither are tax tokens — fall through to other heuristics
+  return false;
+}
+```
+
+> **Note:** This strategy requires a two-step flow: first fetch the quote (to get `fromTokenTax` / `toTokenTax`), then decide `feeOnOutput` and re-fetch if needed. Alternatively, cache known tax token addresses locally.
+
+#### 5. Combination strategy (recommended)
 
 Combine the above in priority order for maximum flexibility:
 
 ```ts
 import { NATIVE_PLS, WPLS, BLUE_CHIPS } from "@switch-win/sdk/constants";
+import type { BestPathResponse } from "@switch-win/sdk/types";
 
 const MY_PROJECT_TOKEN = "0xYourProjectTokenAddress".toLowerCase();
 const plsAddresses = [NATIVE_PLS.toLowerCase(), WPLS.toLowerCase()];
 
-function shouldFeeOnOutput(fromToken: string, toToken: string): boolean {
-  const from = fromToken.toLowerCase();
-  const to   = toToken.toLowerCase();
+function shouldFeeOnOutput(from: string, to: string, quote?: BestPathResponse): boolean {
+  const fromAddr = from.toLowerCase();
+  const toAddr   = to.toLowerCase();
 
   // Priority 1: If either token is your project token, take fee in the opposite
-  if (from === MY_PROJECT_TOKEN) return true;   // fee on output = collect output
-  if (to === MY_PROJECT_TOKEN)   return false;  // fee on input  = collect input
+  if (fromAddr === MY_PROJECT_TOKEN) return true;   // fee on output = collect output
+  if (toAddr === MY_PROJECT_TOKEN)   return false;  // fee on input  = collect input
 
-  // Priority 2: Prefer collecting PLS/WPLS
-  if (plsAddresses.includes(from)) return false; // fee on input  = collect PLS
-  if (plsAddresses.includes(to))   return true;  // fee on output = collect PLS
+  // Priority 2: Avoid collecting tax tokens (fee revenue lost to transfer tax)
+  if (quote) {
+    const fromIsTax = quote.fromTokenTax?.isTaxToken ?? false;
+    const toIsTax   = quote.toTokenTax?.isTaxToken ?? false;
+    if (fromIsTax && !toIsTax) return true;   // collect non-tax output
+    if (toIsTax && !fromIsTax) return false;  // collect non-tax input
+  }
 
-  // Priority 3: Prefer collecting blue chips
-  if (BLUE_CHIPS.has(to) && !BLUE_CHIPS.has(from)) return true;
-  if (BLUE_CHIPS.has(from) && !BLUE_CHIPS.has(to)) return false;
+  // Priority 3: Prefer collecting PLS/WPLS
+  if (plsAddresses.includes(fromAddr)) return false; // fee on input  = collect PLS
+  if (plsAddresses.includes(toAddr))   return true;  // fee on output = collect PLS
+
+  // Priority 4: Prefer collecting blue chips
+  if (BLUE_CHIPS.has(toAddr) && !BLUE_CHIPS.has(fromAddr)) return true;
+  if (BLUE_CHIPS.has(fromAddr) && !BLUE_CHIPS.has(toAddr)) return false;
 
   // Default: fee on input
   return false;
@@ -611,17 +697,29 @@ Complete runnable examples are in the [`examples/`](examples/) directory:
 
 ## Rate Limits
 
-The API enforces **per-key rate limiting**. Each API key has its own configurable rate limit.
+All requests require a valid API key. The API enforces **dual-bucket rate limiting** — both checks must pass:
 
-| Tier | Requests / minute | Notes |
-|---|---|---|
-| Default | 100 | Applied to any new key unless overridden |
-| Custom | Configurable | Set per-key during creation or updated later |
-| No API key (IP-based) | 10 | Heavily throttled — always use an API key |
+| Bucket | Scope | Default Limit | Description |
+|---|---|---|---|
+| Per-key | All IPs sharing one API key | 100 req/min | Total throughput for the key (configurable per key) |
+| Per-IP | Each unique IP within a key | 10 req/min | Prevents one caller from monopolising a shared key |
+
+Both limits apply simultaneously. A single IP can never exceed 10/min, and all IPs combined can never push a key past its total limit.
+
+Every successful response includes informational headers:
+
+```
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 87
+```
+
+### IP Whitelisting for Backend Servers
+
+If your backend proxies Switch quotes to end users (server-to-server calls), ask the Switch team to **whitelist your server IP(s)** for your API key. Whitelisted IPs skip the 10/min per-IP sub-limit but still count toward the key's total — giving your backend access to the key's full allocation.
 
 If you receive a `429 Too Many Requests` response, back off and retry after a short delay using exponential backoff.
 
-To request a new API key or change your rate limit, contact the Switch team (see [Support](#support)).
+To request a new API key, IP whitelisting, or rate limit changes, contact the Switch team (see [Support](#support)).
 
 ---
 

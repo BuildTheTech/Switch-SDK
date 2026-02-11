@@ -19,6 +19,7 @@ export type {
   SingleRouteAllocation,
   HopAllocationPlan,
   HopAdapterAllocationPlan,
+  TokenTaxResponse,
   ErrorResponse,
   QuoteResponse,
 } from "./types.js";
