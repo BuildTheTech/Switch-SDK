@@ -7,7 +7,7 @@
  * File: app/api/quote/route.ts  (Next.js App Router)
  *
  * Frontend usage:
- *   const res = await fetch("/api/quote?from=0x...&to=0x...&amount=1000000000000000000&sender=0x...");
+ *   const res = await fetch("/api/quote?network=pulsechain&from=0x...&to=0x...&amount=1000000000000000000&sender=0x...");
  *   const quote = await res.json();
  */
 

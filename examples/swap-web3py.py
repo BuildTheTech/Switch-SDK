@@ -21,7 +21,7 @@ from web3 import Web3
 # ── Constants ────────────────────────────────────────────────────────
 
 API_BASE = "https://quote.switch.win"
-SWITCH_ROUTER = "0x33A6babb70DF3D913dDC9B0DfaD59353Dc956935"
+SWITCH_ROUTER = "0x69033829f50244FD1be7BDC8e74aE0fF97E47126"
 NATIVE_PLS = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
 RPC_URL = os.environ.get("RPC_URL", "https://rpc.pulsechain.com")
 
@@ -68,6 +68,7 @@ AMOUNT = 1000 * 10**18  # 1000 WPLS in wei
 SLIPPAGE_BPS = 100  # 1%
 FEE_BPS = 30  # 0.30%
 PARTNER_ADDRESS = None  # your partner wallet or None
+RECEIVER_ADDRESS = None  # custom recipient address or None to send to sender
 
 
 def swap(
@@ -80,6 +81,7 @@ def swap(
     fee_bps: int = 0,
     fee_on_output: bool = False,
     partner: str | None = None,
+    receiver: str | None = None,
 ):
     """Execute a full swap: quote → approve → send."""
     sender = account.address
@@ -88,6 +90,7 @@ def swap(
 
     # ── 1. Fetch quote ───────────────────────────────────────────
     params = {
+        "network": "pulsechain",
         "from": from_token,
         "to": to_token,
         "amount": str(amount_wei),
@@ -100,6 +103,8 @@ def swap(
         params["feeOnOutput"] = "true"
     if partner:
         params["partnerAddress"] = partner
+    if receiver:
+        params["receiver"] = receiver
 
     print(f"\nFetching quote...")
     resp = requests.get(
@@ -119,7 +124,7 @@ def swap(
 
     print(f"Expected output: {quote['totalAmountOut']}")
     print(f"Min output:      {quote['minAmountOut']}")
-    print(f"Strategy:        {quote['splitStrategy']}")
+    print(f"Eff. slippage:   {quote['effectiveSlippagePercent']}%")
     print(f"Paths:           {len(quote['paths'])}")
 
     # ── 2. Approve ERC-20 if needed ──────────────────────────────
@@ -185,6 +190,7 @@ def main():
         fee_bps=FEE_BPS,
         fee_on_output=False,
         partner=PARTNER_ADDRESS,
+        receiver=RECEIVER_ADDRESS,
     )
 
 

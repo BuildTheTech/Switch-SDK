@@ -52,7 +52,7 @@ Get a swap quote and execute it in **three steps**:
 ```bash
 # 1. Get quote with tx calldata
 curl -H "x-api-key: YOUR_KEY" \
-  "https://quote.switch.win/swap/quote?from=0xA1077a294dDE1B09bB078844df40758a5D0f9a27&to=0x95B303987A60C71504D99Aa1b13B4DA07b0790ab&amount=1000000000000000000&sender=0xYOUR_WALLET&slippage=100"
+  "https://quote.switch.win/swap/quote?network=pulsechain&from=0xA1077a294dDE1B09bB078844df40758a5D0f9a27&to=0x95B303987A60C71504D99Aa1b13B4DA07b0790ab&amount=1000000000000000000&sender=0xYOUR_WALLET&slippage=100"
 
 # 2. Approve the SwitchRouter to spend your input token (ERC-20 only, skip for native PLS)
 
@@ -68,7 +68,7 @@ The response `tx` field contains a fully-encoded `goSwitch()` call — just forw
 import type { BestPathResponse, SwapTransaction } from "@switch-win/sdk/types";
 import { SWITCH_ROUTER, NATIVE_PLS, API_BASE } from "@switch-win/sdk/constants";
 
-const res = await fetch(`${API_BASE}/swap/quote?from=${NATIVE_PLS}&to=0x95B3...&amount=1000000000000000000&sender=${wallet}`, {
+const res = await fetch(`${API_BASE}/swap/quote?network=pulsechain&from=${NATIVE_PLS}&to=0x95B3...&amount=1000000000000000000&sender=${wallet}`, {
   headers: { "x-api-key": process.env.SWITCH_API_KEY! },
 });
 const quote: BestPathResponse = await res.json();
@@ -94,7 +94,7 @@ Every request **must** include an API key via one of:
 **Example:**
 
 ```bash
-curl -H "x-api-key: YOUR_KEY" "https://quote.switch.win/swap/quote?from=0xA1077a294dDE1B09bB078844df40758a5D0f9a27&to=0x95B303987A60C71504D99Aa1b13B4DA07b0790ab&amount=1000000000000000000&sender=0xYourWallet"
+curl -H "x-api-key: YOUR_KEY" "https://quote.switch.win/swap/quote?network=pulsechain&from=0xA1077a294dDE1B09bB078844df40758a5D0f9a27&to=0x95B303987A60C71504D99Aa1b13B4DA07b0790ab&amount=1000000000000000000&sender=0xYourWallet"
 ```
 
 ### Keeping Your API Key Secure
@@ -136,12 +136,14 @@ Returns the optimal split-route for a swap and (optionally) a ready-to-send tran
 
 | Parameter | Required | Type | Default | Description |
 |---|---|---|---|---|
+| `network` | **Yes** | string | — | Target blockchain network. Currently only `"pulsechain"` is supported. |
 | `from` | **Yes** | address | — | Input token address. Use `0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE` for native PLS. |
 | `to` | **Yes** | address | — | Output token address. Use `0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE` for native PLS. |
 | `amount` | **Yes** | string | — | Input amount in **wei** (raw integer string, no decimals). Max: 10²⁷. |
-| `sender` | No* | address | — | Sender/recipient wallet address. **Required to receive `tx` calldata in the response.** |
+| `sender` | No* | address | — | Sender wallet address. **Required to receive `tx` calldata in the response.** |
+| `receiver` | No | address | `sender` | Custom recipient address. If omitted, output tokens are sent to `sender`. |
 | `slippage` | No | integer | `50` | Slippage tolerance in **basis points** (bps). `50` = 0.50 %. Range: `0`–`5000`. |
-| `fee` | No | integer | `0` | Protocol fee in basis points. Range: `0`–`100` (0 %–1 %). |
+| `fee` | No | integer | `25` | Protocol fee in basis points (0.25 %). Range: `25`–`100`. Defaults to `25` if omitted. |
 | `feeOnOutput` | No | `"true"` / `"false"` | `"false"` | If `"true"`, the fee is deducted from the **output** token; otherwise from the **input** token. |
 | `partnerAddress` | No | address | `0x0…0` | Your partner wallet to receive 50 % of collected fees. Omit or pass `0x0` for no partner. |
 
@@ -150,7 +152,7 @@ Returns the optimal split-route for a swap and (optionally) a ready-to-send tran
 ### Example Request
 
 ```
-GET /swap/quote?from=0xA1077a294dDE1B09bB078844df40758a5D0f9a27&to=0x95B303987A60C71504D99Aa1b13B4DA07b0790ab&amount=1000000000000000000&sender=0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045&slippage=100&fee=30&feeOnOutput=true&partnerAddress=0xYourPartnerWallet
+GET /swap/quote?network=pulsechain&from=0xA1077a294dDE1B09bB078844df40758a5D0f9a27&to=0x95B303987A60C71504D99Aa1b13B4DA07b0790ab&amount=1000000000000000000&sender=0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045&slippage=100&fee=30&feeOnOutput=true&partnerAddress=0xYourPartnerWallet
 ```
 
 ### Example Response
@@ -159,10 +161,10 @@ GET /swap/quote?from=0xA1077a294dDE1B09bB078844df40758a5D0f9a27&to=0x95B303987A6
 {
   "fromToken": "0xA1077a294dDE1B09bB078844df40758a5D0f9a27",
   "toToken": "0x95B303987A60C71504D99Aa1b13B4DA07b0790ab",
+  "receiver": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
   "totalAmountIn": "1000000000000000000",
   "totalAmountOut": "52934810000000000000",
   "minAmountOut": "52405461900000000000",   // totalAmountOut adjusted for tax + fee + slippage
-  "splitStrategy": "dual-route",
   "fromTokenTax": { "isTaxToken": false, "buyTaxBps": 0, "sellTaxBps": 0 },
   "toTokenTax":   { "isTaxToken": false, "buyTaxBps": 0, "sellTaxBps": 0 },
   "paths": [ /* ... detailed path info ... */ ],
@@ -179,7 +181,7 @@ GET /swap/quote?from=0xA1077a294dDE1B09bB078844df40758a5D0f9a27&to=0x95B303987A6
             "totalAmountOut": "31893000000000000000",
             "legs": [
               {
-                "adapter": "0xAdapterAddress1",
+                "adapter": "PulseXV2",
                 "amountIn": "600000000000000000",
                 "amountOut": "31893000000000000000"
               }
@@ -196,7 +198,7 @@ GET /swap/quote?from=0xA1077a294dDE1B09bB078844df40758a5D0f9a27&to=0x95B303987A6
             "totalAmountOut": "2100000000",
             "legs": [
               {
-                "adapter": "0xAdapterAddress2",
+                "adapter": "UniswapV3",
                 "amountIn": "400000000000000000",
                 "amountOut": "2100000000"
               }
@@ -208,7 +210,7 @@ GET /swap/quote?from=0xA1077a294dDE1B09bB078844df40758a5D0f9a27&to=0x95B303987A6
             "totalAmountOut": "21041810000000000000",
             "legs": [
               {
-                "adapter": "0xAdapterAddress3",
+                "adapter": "9inchV2",
                 "amountIn": "2100000000",
                 "amountOut": "21041810000000000000"
               }
@@ -220,7 +222,7 @@ GET /swap/quote?from=0xA1077a294dDE1B09bB078844df40758a5D0f9a27&to=0x95B303987A6
   },
   // Transaction object — only present when `sender` is provided
   "tx": {
-    "to": "0x33A6babb70DF3D913dDC9B0DfaD59353Dc956935",
+    "to": "0x69033829f50244FD1be7BDC8e74aE0fF97E47126",
     "data": "0x...",     // ABI-encoded goSwitch() calldata
     "value": "0"          // "0" for ERC-20 input; amountIn for native PLS input
   }
@@ -280,38 +282,58 @@ That's it. The `tx.data` already encodes the correct `goSwitch()` call with your
 
 Some tokens on PulseChain charge a percentage fee on every `transfer()` call — commonly called **tax tokens** or **fee-on-transfer tokens**. When you swap into or out of one of these tokens, the actual amount received differs from the quoted DEX output because the token's own contract skims a fee during the transfer.
 
-The API automatically detects tax tokens and returns the tax rates in the response:
+The API automatically detects tax tokens via empirical simulation and returns the tax rates in the response:
 
 ```jsonc
 {
-  // Selling a 5% sell-tax token
-  "fromTokenTax": { "isTaxToken": true, "buyTaxBps": 500, "sellTaxBps": 500 },
+  // Selling a token with 1.2% sell tax
+  "fromTokenTax": { "isTaxToken": true, "buyTaxBps": 100, "sellTaxBps": 120 },
   // Buying a non-tax token
   "toTokenTax":   { "isTaxToken": false, "buyTaxBps": 0, "sellTaxBps": 0 },
-  // minAmountOut already accounts for the sell tax
-  "minAmountOut": "..."
+  // minAmountOut already accounts for the 1.2% sell tax + user slippage
+  "minAmountOut": "...",
+  // Effective slippage = user slippage (0.5%) + sell tax (1.2%) = 1.7%
+  "effectiveSlippageBps": 170,
+  "effectiveSlippagePercent": "1.7"
 }
 ```
 
-**How it affects `minAmountOut`:**
+**How it works:**
 
-- If `fromToken` is a tax token, its **sell tax** reduces the effective input reaching the DEX pools.
-- If `toToken` is a tax token, its **buy tax** reduces what the user ultimately receives.
-- Both taxes (if applicable) are factored into `minAmountOut` *before* slippage, so the transaction won't revert unexpectedly.
+- If `fromToken` is a tax token, its **`sellTaxBps`** reduces the effective input reaching the DEX pools. This is the relevant tax when the token is being **sold** (sent out of the user's wallet).
+- If `toToken` is a tax token, its **`buyTaxBps`** reduces what the user ultimately receives. This is the relevant tax when the token is being **bought** (received into the user's wallet).
+- Both taxes (if applicable) **plus** the user's slippage tolerance are factored into `minAmountOut`, so the transaction won't revert unexpectedly.
+
+**Key fields for integrators:**
+
+| Field | Description |
+|---|---|
+| `fromTokenTax.sellTaxBps` | Sell tax applied when `fromToken` is the input (e.g. 120 = 1.2%) |
+| `toTokenTax.buyTaxBps` | Buy tax applied when `toToken` is the output (e.g. 500 = 5%) |
+| `effectiveSlippageBps` | User slippage + sell tax + buy tax in basis points |
+| `effectiveSlippagePercent` | Same as above, as a human-readable `%` string (e.g. `"1.7"`) |
+| `minAmountOut` | Minimum output with taxes + fee + slippage already applied — use this directly |
 
 **UI recommendations:**
 
-- Display a warning badge when `fromTokenTax.isTaxToken` or `toTokenTax.isTaxToken` is `true`.
-- Show the tax percentage to the user (e.g. "5 % buy tax") so they understand the impact on their trade.
-- Consider automatically increasing slippage tolerance for tax token swaps and adjusting your UI's slippage indicator to reflect this — e.g. showing "Slippage: 5.5 % (includes 5 % token tax)" — so users understand why slippage is higher than their default setting.
+- Display a warning when `fromTokenTax.isTaxToken` or `toTokenTax.isTaxToken` is `true`.
+- Show the tax percentage to the user (e.g. "1.2% sell tax") so they understand the impact.
+- Display `effectiveSlippagePercent` as the total slippage indicator — e.g. "Slippage: 1.7% (includes 1.2% sell tax)".
+- Use `minAmountOut` directly from the API response — it already includes taxes, fees, and slippage. **Do not re-compute it client-side.**
 
 ```ts
-import type { BestPathResponse, TokenTaxResponse } from "@switch-win/sdk/types";
+// Example: display effective slippage in your UI
+const label = `Slippage: ${quote.effectiveSlippagePercent}%`;
+const fromIsTax = quote.fromTokenTax?.isTaxToken ?? false;
+const toIsTax   = quote.toTokenTax?.isTaxToken ?? false;
 
-function getEffectiveTaxBps(quote: BestPathResponse): number {
-  const sellTax = quote.fromTokenTax?.sellTaxBps ?? 0;
-  const buyTax  = quote.toTokenTax?.buyTaxBps ?? 0;
-  return sellTax + buyTax; // simplified; actual math compounds but this is close enough for display
+if (fromIsTax) {
+  // Show: "Slippage: 1.7% (includes 1.2% sell tax)"
+  label += ` (includes ${quote.fromTokenTax!.sellTaxBps / 100}% sell tax)`;
+}
+if (toIsTax) {
+  // Show: "Slippage: 5.5% (includes 5% buy tax)"
+  label += ` (includes ${quote.toTokenTax!.buyTaxBps / 100}% buy tax)`;
 }
 ```
 
@@ -398,27 +420,29 @@ If the transaction reverts, the SwitchRouter contract returns one of these custo
 |---|---|---|
 | `fromToken` | `string` | Input token address |
 | `toToken` | `string` | Output token address |
+| `receiver` | `string?` | Recipient address for output tokens. Same as `sender` unless a custom `receiver` was specified. |
 | `totalAmountIn` | `string` | Total input amount in wei |
-| `totalAmountOut` | `string` | Expected output amount in wei (before fee and slippage) |
+| `totalAmountOut` | `string` | Raw DEX output in wei — reflects price impact only (before taxes, fees, and slippage) |
 | `minAmountOut` | `string` | Minimum acceptable output after token taxes, fee, and slippage. When tax tokens are involved: `totalAmountOut × (10000 − sellTaxBps) / 10000 × (10000 − feeBps) / 10000 × (10000 − buyTaxBps) / 10000 × (10000 − slippageBps) / 10000`. This is the value encoded in the `tx` calldata as `_minTotalAmountOut`. |
-| `splitStrategy` | `string` | Routing strategy used (e.g. `"single-route"`, `"dual-route"`) |
 | `paths` | `SwapPath[]` | Human-readable path descriptions |
 | `routeAllocation` | `RouteAllocationPlan` | Structured route breakdown (matches on-chain structs) |
 | `tx` | `SwapTransaction?` | Ready-to-send transaction. Only present when `sender` is provided. |
 | `fromTokenTax` | `TokenTaxResponse?` | Transfer tax info for the input token. See [Tax Tokens](#tax-tokens-fee-on-transfer). |
 | `toTokenTax` | `TokenTaxResponse?` | Transfer tax info for the output token. See [Tax Tokens](#tax-tokens-fee-on-transfer). |
+| `effectiveSlippageBps` | `number` | User slippage + `fromTokenTax.sellTaxBps` + `toTokenTax.buyTaxBps` combined in basis points. |
+| `effectiveSlippagePercent` | `string` | Same as `effectiveSlippageBps` as a human-readable percentage (e.g. `"1.7"`). |
 
 ### `SwapPath`
 
-A human-readable summary of each route split. Useful for display purposes (e.g. showing the user "60 % via PulseX, 40 % via 9inch").
+A human-readable summary of each route split. Useful for display purposes (e.g. showing the user "60% via PulseXV2, 40% via UniswapV3").
 
 | Field | Type | Description |
 |---|---|---|
-| `adapter` | `string` | Primary adapter address for this path |
+| `adapter` | `string` | Human-readable DEX adapter name (e.g. `"PulseXV2"`, `"UniswapV3"`) |
 | `amountIn` | `string` | Input amount for this path (wei) |
 | `amountOut` | `string` | Expected output for this path (wei) |
 | `path` | `string[]` | Ordered list of token addresses traversed (e.g. `[tokenIn, intermediate, tokenOut]`) |
-| `adapters` | `string[]` | Adapter addresses used at each hop |
+| `adapters` | `string[]` | Human-readable adapter names used at each hop |
 | `percentage` | `number?` | Percentage of total input routed through this path |
 | `legs` | `SwapPathLeg[]?` | Detailed breakdown of each hop-leg in this path |
 
@@ -428,7 +452,7 @@ A human-readable summary of each route split. Useful for display purposes (e.g. 
 |---|---|---|
 | `tokenIn` | `string` | Leg input token |
 | `tokenOut` | `string` | Leg output token |
-| `adapter` | `string?` | Adapter address |
+| `adapter` | `string?` | Human-readable DEX adapter name |
 | `amountIn` | `string` | Input amount (wei) |
 | `amountOut` | `string` | Output amount (wei) |
 | `percentage` | `number?` | Percentage of the hop routed through this adapter |
@@ -481,7 +505,7 @@ Present on every quote response as `fromTokenTax` and `toTokenTax`. Reports whet
 
 | Field | Type | Description |
 |---|---|---|
-| `adapter` | `string` | DEX adapter contract address |
+| `adapter` | `string` | Human-readable DEX adapter name (e.g. `"PulseXV2"`) |
 | `amountIn` | `string` | Input amount routed through this adapter |
 | `amountOut` | `string` | Expected output from this adapter |
 
@@ -508,6 +532,8 @@ Errors are returned as JSON with an `error` field:
 
 | Error | Cause |
 |---|---|
+| `"Missing required parameter: network"` | `network` query param absent |
+| `"This network is not supported at this time."` | `network` is not `"pulsechain"` |
 | `"Missing required parameters: from, to, amount"` | One or more required query params absent |
 | `"Invalid from address (must be 0x + 40 hex chars)"` | `from` is not a valid hex address |
 | `"Invalid to address (must be 0x + 40 hex chars)"` | `to` is not a valid hex address |
@@ -516,7 +542,8 @@ Errors are returned as JSON with an `error` field:
 | `"Amount must be greater than 0"` | `amount` is zero or negative |
 | `"Amount exceeds maximum allowed value"` | `amount` exceeds 10²⁷ (1 billion tokens @ 18 decimals) |
 | `"Slippage must be a number between 0 and 5000 (basis points)"` | `slippage` out of range |
-| `"Fee must be a number between 0 and 100 (basis points)"` | `fee` out of range |
+| `"Fee must be a number between 25 and 100 (basis points). Minimum fee is 0.25%."` | `fee` out of range or below minimum |
+| `"receiver must be a valid Ethereum address (0x + 40 hex chars)"` | Malformed receiver address |
 | `"partnerAddress must be a valid Ethereum address (0x + 40 hex chars)"` | Malformed partner address |
 | `"Failed to find route"` | No viable swap path exists, or route computation timed out (30s limit) |
 
@@ -526,11 +553,12 @@ Errors are returned as JSON with an `error` field:
 
 Switch supports a **50/50 fee-sharing** model for integration partners:
 
-1. Set a `fee` (e.g. `30` = 0.30 %) and your `partnerAddress` when calling the API.
-2. The SwitchRouter contract automatically splits collected fees:
-   - **50 %** goes to the protocol
-   - **50 %** goes to your `partnerAddress`
-3. Accumulated fees can be claimed from the on-chain FeeClaimer contract.
+1. Set a `fee` (e.g. `30` = 0.30 %, minimum `25` = 0.25 %) and your `partnerAddress` when calling the API.
+2. The SwitchRouter contract automatically splits collected fees **during the swap**:
+   - **50 %** sent to the protocol
+   - **50 %** sent directly to your `partnerAddress`
+
+No claiming step is required — your share arrives in the same transaction as the swap.
 
 > If `partnerAddress` is omitted or `0x0`, the fee accrues entirely to the protocol.
 
@@ -673,12 +701,13 @@ All constants are importable from [`src/constants.ts`](src/constants.ts).
 | Name | Value |
 |---|---|
 | **Chain** | PulseChain (Chain ID `369`) |
-| **SwitchRouter** | `0x33A6babb70DF3D913dDC9B0DfaD59353Dc956935` |
+| **SwitchRouter** | `0x69033829f50244FD1be7BDC8e74aE0fF97E47126` |
 | **Native PLS sentinel** | `0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE` |
 | **WPLS** | `0xA1077a294dDE1B09bB078844df40758a5D0f9a27` |
 | **Fee denominator** | `10000` (basis points) |
 | **Max slippage** | `5000` bps (50 %) |
 | **Max fee** | `100` bps (1 %) |
+| **Min fee** | `25` bps (0.25 %) — enforced on-chain by `MIN_FEE` |
 | **Default slippage** | `50` bps (0.50 %) |
 
 ---

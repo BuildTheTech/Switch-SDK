@@ -21,21 +21,24 @@ export interface BestPathResponse {
   fromToken: string;
   /** Output token address */
   toToken: string;
+  /** Recipient address for output tokens. Same as `sender` unless a custom `receiver` was specified. */
+  receiver?: string;
   /** Total input amount in wei */
   totalAmountIn: string;
-  /** Expected output amount in wei (before fee and slippage) */
+  /**
+   * Raw DEX output in wei — reflects price impact only.
+   * This is the amount the pools would return before any taxes, fees, or slippage are applied.
+   */
   totalAmountOut: string;
   /**
-   * Minimum acceptable output after fee and slippage.
+   * Minimum acceptable output after taxes, fee, and slippage.
    *
    * Calculated as:
-   * `totalAmountOut × (10000 − feeBps) / 10000 × (10000 − slippageBps) / 10000`
+   * `totalAmountOut × (1 − sellTax) × (1 − fee) × (1 − buyTax) × (1 − slippage)`
    *
    * This is the value encoded in the `tx` calldata as `_minTotalAmountOut`.
    */
   minAmountOut: string;
-  /** Routing strategy used (e.g. `"single-route"`, `"dual-route"`, `"multi-path-optimized"`) */
-  splitStrategy: string;
   /** Human-readable path descriptions */
   paths: SwapPath[];
   /** Structured route breakdown (matches on-chain structs) */
@@ -53,6 +56,21 @@ export interface BestPathResponse {
    * If `toTokenTax.isTaxToken` is true, `minAmountOut` already accounts for the buy tax.
    */
   toTokenTax?: TokenTaxResponse;
+  /**
+   * Effective slippage in basis points = user slippage + sell tax + buy tax.
+   *
+   * For example, if a user requests 50 bps (0.5%) slippage but the input token has
+   * a 120 bps (1.2%) sell tax, effectiveSlippageBps = 170.
+   *
+   * Display this in your UI so users understand the total tolerance applied.
+   */
+  effectiveSlippageBps: number;
+  /**
+   * Human-readable effective slippage percentage.
+   *
+   * Examples: `"0.5"` (no tax), `"1.7"` (0.5% user + 1.2% sell tax), `"4.5"` (0.5% + 2% sell + 2% buy).
+   */
+  effectiveSlippagePercent: string;
 }
 
 // ── Transaction ─────────────────────────────────────────────────────
@@ -94,7 +112,7 @@ export interface SwapTransaction {
  * Useful for UI display (e.g. "60% via PulseX, 40% via 9inch").
  */
 export interface SwapPath {
-  /** Primary adapter address for this path */
+  /** Human-readable DEX adapter name (e.g. `"PulseXV2"`, `"UniswapV3"`, `"9inchV2"`) */
   adapter: string;
   /** Input amount for this path (wei) */
   amountIn: string;
@@ -102,7 +120,7 @@ export interface SwapPath {
   amountOut: string;
   /** Ordered list of token addresses traversed (e.g. `[tokenIn, intermediate, tokenOut]`) */
   path: string[];
-  /** Adapter addresses used at each hop */
+  /** Human-readable adapter names used at each hop */
   adapters: string[];
   /** Percentage of total input routed through this path */
   percentage?: number;
@@ -116,7 +134,7 @@ export interface SwapPathLeg {
   tokenIn: string;
   /** Leg output token */
   tokenOut: string;
-  /** Adapter address */
+  /** Human-readable DEX adapter name */
   adapter?: string;
   /** Input amount (wei) */
   amountIn: string;

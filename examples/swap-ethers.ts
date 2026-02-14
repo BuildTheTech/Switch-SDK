@@ -38,6 +38,7 @@ const SLIPPAGE_BPS = 100; // 1%
 const FEE_BPS = 30; // 0.30%
 const FEE_ON_OUTPUT = true;
 const PARTNER_ADDRESS = "0x0000000000000000000000000000000000000000"; // your partner wallet
+const RECEIVER_ADDRESS = ""; // custom recipient address, or "" to send to sender
 
 // ── Main ────────────────────────────────────────────────────────────
 
@@ -51,6 +52,7 @@ async function main() {
 
   // ── 1. Fetch quote with tx calldata ───────────────────────────
   const params = new URLSearchParams({
+    network: "pulsechain",
     from: FROM_TOKEN,
     to: TO_TOKEN,
     amount: AMOUNT,
@@ -62,6 +64,7 @@ async function main() {
   if (PARTNER_ADDRESS !== "0x0000000000000000000000000000000000000000") {
     params.set("partnerAddress", PARTNER_ADDRESS);
   }
+  if (RECEIVER_ADDRESS) params.set("receiver", RECEIVER_ADDRESS);
 
   const url = `${API_BASE}/swap/quote?${params}`;
   console.log(`\nFetching quote: ${url}\n`);
@@ -86,7 +89,7 @@ async function main() {
 
   console.log(`Expected output: ${quote.totalAmountOut}`);
   console.log(`Min output:      ${quote.minAmountOut}`);
-  console.log(`Strategy:        ${quote.splitStrategy}`);
+  console.log(`Eff. slippage:   ${quote.effectiveSlippagePercent}%`);
   console.log(`Paths:           ${quote.paths.length}`);
 
   // ── 2. Approve ERC-20 (skip for native PLS) ──────────────────

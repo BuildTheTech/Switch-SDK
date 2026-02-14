@@ -22,7 +22,7 @@ export const CHAIN_ID = 369;
 // ── Contract addresses ──────────────────────────────────────────────
 
 /** SwitchRouter contract — target for all swap transactions */
-export const SWITCH_ROUTER = "0x33A6babb70DF3D913dDC9B0DfaD59353Dc956935";
+export const SWITCH_ROUTER = "0x69033829f50244FD1be7BDC8e74aE0fF97E47126";
 
 /**
  * Native PLS sentinel address.
