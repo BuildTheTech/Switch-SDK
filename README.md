@@ -147,7 +147,7 @@ Returns the optimal split-route for a swap and (optionally) a ready-to-send tran
 | `feeOnOutput` | No | `"true"` / `"false"` | `"false"` | If `"true"`, the fee is deducted from the **output** token; otherwise from the **input** token. |
 | `partnerAddress` | No | address | `0x0…0` | Your partner wallet to receive 50 % of collected fees. Omit or pass `0x0` for no partner. |
 
-> \* If `sender` is omitted, the response will still contain routing data and `minAmountOut`, but the `tx` object will be absent.
+> \* If `sender` is omitted, the response will still contain routing data, `minAmountOut`, and tax info, but the `tx` object will be absent. This is useful for **showing estimated swap output before the user connects their wallet** — you can display prices, routes, and tax warnings without requiring a wallet connection. Once the user connects, re-fetch the quote with `sender` to get the ready-to-send `tx` object.
 
 ### Example Request
 
