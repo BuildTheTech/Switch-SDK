@@ -36,9 +36,9 @@ const TO_TOKEN = "0x95B303987A60C71504D99Aa1b13B4DA07b0790ab"; // PLSX
 const AMOUNT = ethers.parseUnits("1000", 18).toString(); // 1000 WPLS
 const SLIPPAGE_BPS = 100; // 1%
 const FEE_BPS = 30; // 0.30%
-const FEE_ON_OUTPUT = true;
 const PARTNER_ADDRESS = "0x0000000000000000000000000000000000000000"; // your partner wallet
 const RECEIVER_ADDRESS = ""; // custom recipient address, or "" to send to sender
+const FEE_ON_OUTPUT = true; // true = collect fees in output token, false = input token
 
 // ── Main ────────────────────────────────────────────────────────────
 
@@ -60,7 +60,6 @@ async function main() {
     slippage: String(SLIPPAGE_BPS),
   });
   if (FEE_BPS > 0) params.set("fee", String(FEE_BPS));
-  if (FEE_ON_OUTPUT) params.set("feeOnOutput", "true");
   if (PARTNER_ADDRESS !== "0x0000000000000000000000000000000000000000") {
     params.set("partnerAddress", PARTNER_ADDRESS);
   }
@@ -86,6 +85,9 @@ async function main() {
   if (!quote.tx) {
     throw new Error("No tx object in response — did you provide sender?");
   }
+
+  // Choose between fee-on-input (tx) or fee-on-output (txFeeOnOutput)
+  const chosenTx = FEE_ON_OUTPUT ? quote.txFeeOnOutput! : quote.tx;
 
   console.log(`Expected output: ${quote.totalAmountOut}`);
   console.log(`Min output:      ${quote.minAmountOut}`);
@@ -113,9 +115,9 @@ async function main() {
   // ── 3. Send swap transaction ──────────────────────────────────
   console.log("\nSending swap transaction...");
   const txResponse = await signer.sendTransaction({
-    to: quote.tx.to,
-    data: quote.tx.data,
-    value: quote.tx.value,
+    to: chosenTx.to,
+    data: chosenTx.data,
+    value: chosenTx.value,
   });
 
   console.log(`Tx hash: ${txResponse.hash}`);

@@ -43,8 +43,16 @@ export interface BestPathResponse {
   paths: SwapPath[];
   /** Structured route breakdown (matches on-chain structs) */
   routeAllocation?: RouteAllocationPlan;
-  /** Ready-to-send transaction. Only present when `sender` query param is provided. */
+  /** Ready-to-send transaction with fee on **input** (default). Only present when `sender` query param is provided. */
   tx?: SwapTransaction;
+  /**
+   * Ready-to-send transaction with fee on **output**.
+   * Only present when `sender` query param is provided.
+   *
+   * Use this variant when fee-on-output is preferred (e.g. to collect fees in
+   * the output token). See the README for recommended strategies.
+   */
+  txFeeOnOutput?: SwapTransaction;
   /**
    * Transfer tax info for the input token.
    * Present when the API detects whether the token has a fee-on-transfer mechanism.

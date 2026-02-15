@@ -67,6 +67,7 @@ TO_TOKEN = "0x95B303987A60C71504D99Aa1b13B4DA07b0790ab"  # PLSX
 AMOUNT = 1000 * 10**18  # 1000 WPLS in wei
 SLIPPAGE_BPS = 100  # 1%
 FEE_BPS = 30  # 0.30%
+FEE_ON_OUTPUT = True  # True = collect fees in output token, False = input token
 PARTNER_ADDRESS = None  # your partner wallet or None
 RECEIVER_ADDRESS = None  # custom recipient address or None to send to sender
 
@@ -99,8 +100,6 @@ def swap(
     }
     if fee_bps:
         params["fee"] = str(fee_bps)
-    if fee_on_output:
-        params["feeOnOutput"] = "true"
     if partner:
         params["partnerAddress"] = partner
     if receiver:
@@ -119,8 +118,12 @@ def swap(
         raise Exception(f"Quote error: {quote['error']}")
 
     tx_data = quote.get("tx")
+    tx_data_fee_on_output = quote.get("txFeeOnOutput")
     if not tx_data:
-        raise Exception("No tx object in response — did you provide sender?")
+        raise Exception("No tx object in response \u2014 did you provide sender?")
+
+    # Choose between fee-on-input (tx) or fee-on-output (txFeeOnOutput)
+    chosen_tx = tx_data_fee_on_output if fee_on_output and tx_data_fee_on_output else tx_data
 
     print(f"Expected output: {quote['totalAmountOut']}")
     print(f"Min output:      {quote['minAmountOut']}")
@@ -133,13 +136,13 @@ def swap(
             address=Web3.to_checksum_address(from_token), abi=ERC20_ABI
         )
         current_allowance = token.functions.allowance(
-            sender, tx_data["to"]
+            sender, chosen_tx["to"]
         ).call()
 
         if current_allowance < amount_wei:
             print("\nApproving SwitchRouter to spend tokens...")
             approve_tx = token.functions.approve(
-                tx_data["to"], amount_wei
+                chosen_tx["to"], amount_wei
             ).build_transaction(
                 {
                     "from": sender,
@@ -157,9 +160,9 @@ def swap(
     print("\nSending swap transaction...")
     swap_tx = {
         "from": sender,
-        "to": Web3.to_checksum_address(tx_data["to"]),
-        "data": tx_data["data"],
-        "value": int(tx_data["value"]),
+        "to": Web3.to_checksum_address(chosen_tx["to"]),
+        "data": chosen_tx["data"],
+        "value": int(chosen_tx["value"]),
         "nonce": w3.eth.get_transaction_count(sender),
     }
 
@@ -188,7 +191,7 @@ def main():
         amount_wei=AMOUNT,
         slippage_bps=SLIPPAGE_BPS,
         fee_bps=FEE_BPS,
-        fee_on_output=False,
+        fee_on_output=FEE_ON_OUTPUT,
         partner=PARTNER_ADDRESS,
         receiver=RECEIVER_ADDRESS,
     )

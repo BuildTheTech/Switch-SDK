@@ -144,7 +144,6 @@ Returns the optimal split-route for a swap and (optionally) a ready-to-send tran
 | `receiver` | No | address | `sender` | Custom recipient address. If omitted, output tokens are sent to `sender`. |
 | `slippage` | No | integer | `50` | Slippage tolerance in **basis points** (bps). `50` = 0.50 %. Range: `0`–`5000`. |
 | `fee` | No | integer | `25` | Protocol fee in basis points (0.25 %). Range: `25`–`100`. Defaults to `25` if omitted. |
-| `feeOnOutput` | No | `"true"` / `"false"` | `"false"` | If `"true"`, the fee is deducted from the **output** token; otherwise from the **input** token. |
 | `partnerAddress` | No | address | `0x0…0` | Your partner wallet to receive 50 % of collected fees. Omit or pass `0x0` for no partner. |
 
 > \* If `sender` is omitted, the response will still contain routing data, `minAmountOut`, and tax info, but the `tx` object will be absent. This is useful for **showing estimated swap output before the user connects their wallet** — you can display prices, routes, and tax warnings without requiring a wallet connection. Once the user connects, re-fetch the quote with `sender` to get the ready-to-send `tx` object.
@@ -152,7 +151,7 @@ Returns the optimal split-route for a swap and (optionally) a ready-to-send tran
 ### Example Request
 
 ```
-GET /swap/quote?network=pulsechain&from=0xA1077a294dDE1B09bB078844df40758a5D0f9a27&to=0x95B303987A60C71504D99Aa1b13B4DA07b0790ab&amount=1000000000000000000&sender=0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045&slippage=100&fee=30&feeOnOutput=true&partnerAddress=0xYourPartnerWallet
+GET /swap/quote?network=pulsechain&from=0xA1077a294dDE1B09bB078844df40758a5D0f9a27&to=0x95B303987A60C71504D99Aa1b13B4DA07b0790ab&amount=1000000000000000000&sender=0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045&slippage=100&fee=30&partnerAddress=0xYourPartnerWallet
 ```
 
 ### Example Response
@@ -223,8 +222,14 @@ GET /swap/quote?network=pulsechain&from=0xA1077a294dDE1B09bB078844df40758a5D0f9a
   // Transaction object — only present when `sender` is provided
   "tx": {
     "to": "0x69033829f50244FD1be7BDC8e74aE0fF97E47126",
-    "data": "0x...",     // ABI-encoded goSwitch() calldata
+    "data": "0x...",     // ABI-encoded goSwitch() calldata with feeOnOutput = false
     "value": "0"          // "0" for ERC-20 input; amountIn for native PLS input
+  },
+  // Same swap but with fee taken from the output token instead
+  "txFeeOnOutput": {
+    "to": "0x69033829f50244FD1be7BDC8e74aE0fF97E47126",
+    "data": "0x...",     // ABI-encoded goSwitch() calldata with feeOnOutput = true
+    "value": "0"
   }
 }
 ```
@@ -564,20 +569,22 @@ No claiming step is required — your share arrives in the same transaction as t
 
 ### Fee on Input vs Fee on Output
 
-The `feeOnOutput` parameter controls **when** the fee is deducted:
+Every quote response includes **two** transaction objects (when `sender` is provided):
 
-| Mode | `feeOnOutput` | How it works | User experience |
+| Field | `feeOnOutput` | How it works | User experience |
 |---|---|---|---|
-| **Fee on input** (default) | `"false"` | Fee is deducted from the input amount *before* routing. The user sends the full `amount` but less gets routed through DEX pools. | User sends exactly `amount` tokens. Output is slightly lower because less was routed. |
-| **Fee on output** | `"true"` | Full input is routed through DEX pools, then the fee is deducted from the output *before* delivery. | User sends exactly `amount` tokens. The gross output is higher but the fee is taken from it. |
+| `tx` (default) | `false` | Fee is deducted from the input amount *before* routing. The user sends the full `amount` but less gets routed through DEX pools. | User sends exactly `amount` tokens. Output is slightly lower because less was routed. |
+| `txFeeOnOutput` | `true` | Full input is routed through DEX pools, then the fee is deducted from the output *before* delivery. | User sends exactly `amount` tokens. The gross output is higher but the fee is taken from it. |
 
-Both modes produce similar net results. **Fee on input** is the default and most common choice. **Fee on output** can be preferable when you want to show users the "full" routing output before fees.
+Both modes produce similar net results. **Fee on input** (`tx`) is the default and most common choice. **Fee on output** (`txFeeOnOutput`) can be preferable when you want to collect fees in the output token.
 
-> **Note:** The `minAmountOut` in the API response already accounts for the fee in both modes, so the on-chain slippage check will pass correctly regardless of which mode you choose.
+Since every response contains both variants, you can **decide which to use at send time** — no need to re-fetch the quote.
+
+> **Note:** The `minAmountOut` in the API response already accounts for the fee in both modes, so the on-chain slippage check will pass correctly regardless of which variant you send.
 
 ### Choosing the Right Mode — Recommended Strategies
 
-The best `feeOnOutput` setting depends on your use case. Here are battle-tested patterns:
+The best fee mode depends on your use case. Here are battle-tested strategies for choosing between `tx` and `txFeeOnOutput`:
 
 #### 1. Prioritize receiving PLS (native token)
 
@@ -648,7 +655,7 @@ function shouldFeeOnOutput(quote: BestPathResponse): boolean {
 }
 ```
 
-> **Note:** This strategy requires a two-step flow: first fetch the quote (to get `fromTokenTax` / `toTokenTax`), then decide `feeOnOutput` and re-fetch if needed. Alternatively, cache known tax token addresses locally.
+> **Note:** This strategy requires the quote response (to read `fromTokenTax` / `toTokenTax`), which you already have since both `tx` objects arrive in the same response — no second fetch needed.
 
 #### 5. Combination strategy (recommended)
 
@@ -690,7 +697,15 @@ function shouldFeeOnOutput(from: string, to: string, quote?: BestPathResponse): 
 }
 ```
 
-> **Tip:** You can change `feeOnOutput` on every swap — it does not need to be the same value across all requests. Adapt dynamically based on the token pair.
+Then send the chosen transaction:
+
+```ts
+const useFeeOnOutput = shouldFeeOnOutput(from, to, quote);
+const chosenTx = useFeeOnOutput ? quote.txFeeOnOutput! : quote.tx!;
+await signer.sendTransaction(chosenTx);
+```
+
+> **Tip:** You can choose differently on every swap — adapt dynamically based on the token pair.
 
 ---
 
