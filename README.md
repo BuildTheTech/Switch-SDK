@@ -431,7 +431,8 @@ If the transaction reverts, the SwitchRouter contract returns one of these custo
 | `minAmountOut` | `string` | Minimum acceptable output after token taxes, fee, and slippage. When tax tokens are involved: `totalAmountOut × (10000 − sellTaxBps) / 10000 × (10000 − feeBps) / 10000 × (10000 − buyTaxBps) / 10000 × (10000 − slippageBps) / 10000`. This is the value encoded in the `tx` calldata as `_minTotalAmountOut`. |
 | `paths` | `SwapPath[]` | Human-readable path descriptions |
 | `routeAllocation` | `RouteAllocationPlan` | Structured route breakdown (matches on-chain structs) |
-| `tx` | `SwapTransaction?` | Ready-to-send transaction. Only present when `sender` is provided. |
+| `tx` | `SwapTransaction?` | Ready-to-send transaction (fee on input). Only present when `sender` is provided. |
+| `txFeeOnOutput` | `SwapTransaction?` | Ready-to-send transaction (fee on output). Only present when `sender` is provided. Choose between `tx` and `txFeeOnOutput` at send time. |
 | `fromTokenTax` | `TokenTaxResponse?` | Transfer tax info for the input token. See [Tax Tokens](#tax-tokens-fee-on-transfer). |
 | `toTokenTax` | `TokenTaxResponse?` | Transfer tax info for the output token. See [Tax Tokens](#tax-tokens-fee-on-transfer). |
 | `effectiveSlippageBps` | `number` | User slippage + `fromTokenTax.sellTaxBps` + `toTokenTax.buyTaxBps` combined in basis points. |
