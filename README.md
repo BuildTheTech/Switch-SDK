@@ -369,7 +369,7 @@ Returns the optimal split-route for a swap and (optionally) a ready-to-send tran
 | `sender` | No* | address | — | Sender wallet address. **Required to receive `tx` calldata in the response.** |
 | `receiver` | No | address | `sender` | Custom recipient address. If omitted, output tokens are sent to `sender`. |
 | `slippage` | No | integer | `50` | Slippage tolerance in **basis points** (bps). `50` = 0.50 %. Range: `0`–`5000`. |
-| `fee` | No | integer | `25` | Protocol fee in basis points (0.25 %). Range: `25`–`100`. Defaults to `25` if omitted. |
+| `fee` | No | integer | `30` | Protocol fee in basis points (0.30 %). Range: `30`–`100`. Defaults to `30` if omitted. |
 | `partnerAddress` | No | address | `0x0…0` | Your partner wallet to receive 50 % of collected fees. Omit or pass `0x0` for no partner. |
 | `feeOnOutput` | No | string | `"false"` | Controls fee mode. `"true"` = fee deducted from output. `"false"` = fee deducted from input (default). Affects `expectedOutputAmount` accuracy — see [Recommended Integration Flow](#recommended-integration-flow). |
 | `adapters` | No | string | — | Comma-separated adapter indices to restrict routing (e.g. `"3"` for PulseXV2 only, `"3,6"` for PulseXV2 + UniswapV3). Get available indices from `/swap/adapters`. |
@@ -779,7 +779,7 @@ Errors are returned as JSON with an `error` field:
 | `"Amount must be greater than 0"` | `amount` is zero or negative |
 | `"Amount exceeds maximum allowed value"` | `amount` exceeds 10²⁷ (1 billion tokens @ 18 decimals) |
 | `"Slippage must be a number between 0 and 5000 (basis points)"` | `slippage` out of range |
-| `"Fee must be a number between 25 and 100 (basis points). Minimum fee is 0.25%."` | `fee` out of range or below minimum |
+| `"Fee must be a number between 30 and 100 (basis points). Minimum fee is 0.30%."` | `fee` out of range or below minimum |
 | `"receiver must be a valid Ethereum address (0x + 40 hex chars)"` | Malformed receiver address |
 | `"partnerAddress must be a valid Ethereum address (0x + 40 hex chars)"` | Malformed partner address |
 | `"Failed to find route"` | No viable swap path exists, or route computation timed out (30s limit) |
@@ -790,7 +790,7 @@ Errors are returned as JSON with an `error` field:
 
 Switch supports a **50/50 fee-sharing** model for integration partners:
 
-1. Set a `fee` (e.g. `30` = 0.30 %, minimum `25` = 0.25 %) and your `partnerAddress` when calling the API.
+1. Set a `fee` (e.g. `30` = 0.30 %, minimum `30` = 0.30 %) and your `partnerAddress` when calling the API.
 2. The SwitchRouter contract automatically splits collected fees **during the swap**:
    - **50 %** sent to the protocol
    - **50 %** sent directly to your `partnerAddress`
@@ -954,7 +954,7 @@ All constants are importable from [`src/constants.ts`](src/constants.ts).
 | **Fee denominator** | `10000` (basis points) |
 | **Max slippage** | `5000` bps (50 %) |
 | **Max fee** | `100` bps (1 %) |
-| **Min fee** | `25` bps (0.25 %) — enforced on-chain by `MIN_FEE` |
+| **Min fee** | `30` bps (0.30 %) — enforced on-chain by `MIN_FEE` |
 | **Default slippage** | `50` bps (0.50 %) |
 
 ---
