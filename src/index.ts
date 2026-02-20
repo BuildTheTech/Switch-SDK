@@ -22,6 +22,10 @@ export type {
   TokenTaxResponse,
   ErrorResponse,
   QuoteResponse,
+  AdapterInfo,
+  AdaptersResponse,
+  CheckTaxResponse,
+  CheckTaxResult,
 } from "./types.js";
 
 export { isErrorResponse } from "./types.js";
@@ -29,6 +33,9 @@ export { isErrorResponse } from "./types.js";
 // Constants
 export {
   API_BASE,
+  QUOTE_ENDPOINT,
+  ADAPTERS_ENDPOINT,
+  CHECK_TAX_ENDPOINT,
   CHAIN_ID,
   SWITCH_ROUTER,
   NATIVE_PLS,

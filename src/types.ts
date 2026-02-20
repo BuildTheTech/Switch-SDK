@@ -1,5 +1,5 @@
 /**
- * Switch DEX Aggregator — API Response Types
+ * Switch DEX Aggregator -- API Response Types
  *
  * TypeScript interfaces for all objects returned by the /swap/quote endpoint.
  * Import these to get full type safety when integrating with the Switch API.
@@ -13,7 +13,7 @@
  * ```
  */
 
-// ── Top-level response ──────────────────────────────────────────────
+// -- Top-level response --
 
 /** Full response from `GET /swap/quote` */
 export interface BestPathResponse {
@@ -26,15 +26,24 @@ export interface BestPathResponse {
   /** Total input amount in wei */
   totalAmountIn: string;
   /**
-   * Raw DEX output in wei — reflects price impact only.
+   * Raw DEX output in wei -- reflects price impact only.
    * This is the amount the pools would return before any taxes, fees, or slippage are applied.
    */
   totalAmountOut: string;
   /**
+   * Expected output the user will actually receive, in wei.
+   * Accounts for sell tax, protocol fee, and buy tax -- but NOT slippage.
+   *
+   * Use this for UI display of the estimated received amount. For tax tokens,
+   * this is significantly more accurate than applying taxes as linear
+   * multipliers to `totalAmountOut`.
+   */
+  expectedOutputAmount: string;
+  /**
    * Minimum acceptable output after taxes, fee, and slippage.
    *
    * Calculated as:
-   * `totalAmountOut × (1 − sellTax) × (1 − fee) × (1 − buyTax) × (1 − slippage)`
+   * `totalAmountOut -- (1 -- sellTax) -- (1 -- fee) -- (1 -- buyTax) -- (1 -- slippage)`
    *
    * This is the value encoded in the `tx` calldata as `_minTotalAmountOut`.
    */
@@ -65,7 +74,7 @@ export interface BestPathResponse {
    */
   toTokenTax?: TokenTaxResponse;
   /**
-   * Effective slippage in basis points = user slippage + sell tax + buy tax.
+   * Effective slippage in basis points = user slippage + sell tax + buy tax + auto-liq buffer.
    *
    * For example, if a user requests 50 bps (0.5%) slippage but the input token has
    * a 120 bps (1.2%) sell tax, effectiveSlippageBps = 170.
@@ -80,8 +89,6 @@ export interface BestPathResponse {
    */
   effectiveSlippagePercent: string;
 }
-
-// ── Transaction ─────────────────────────────────────────────────────
 
 /** Transfer tax information for a token (fee-on-transfer) */
 export interface TokenTaxResponse {
@@ -101,7 +108,7 @@ export interface TokenTaxResponse {
   sellTaxBps: number;
 }
 
-// ── Transaction (on-chain) ──────────────────────────────────────────
+// -- Transaction (on-chain) --
 
 /** Transaction object ready to be sent on-chain via `signer.sendTransaction()` */
 export interface SwapTransaction {
@@ -113,7 +120,7 @@ export interface SwapTransaction {
   value: string;
 }
 
-// ── Human-readable paths ────────────────────────────────────────────
+// -- Human-readable paths --
 
 /**
  * Human-readable summary of a single route split.
@@ -152,7 +159,7 @@ export interface SwapPathLeg {
   percentage?: number;
 }
 
-// ── Route allocation (matches on-chain structs) ─────────────────────
+// -- Route allocation (matches on-chain structs) --
 
 /** Top-level route allocation plan */
 export interface RouteAllocationPlan {
@@ -194,7 +201,7 @@ export interface HopAdapterAllocationPlan {
   amountOut: string;
 }
 
-// ── Error response ──────────────────────────────────────────────────
+// -- Error response --
 
 /** Error response returned when the API encounters a problem */
 export interface ErrorResponse {
@@ -210,3 +217,37 @@ export function isErrorResponse(
 ): response is ErrorResponse {
   return "error" in response;
 }
+
+// -- Adapters endpoint --
+
+/** A single adapter (DEX) returned by `GET /swap/adapters` */
+export interface AdapterInfo {
+  /** On-chain adapter index (used in the `adapters` query param for `/swap/quote`) */
+  index: number;
+  /** Human-readable DEX name (e.g. `"PulseXV2"`, `"UniswapV3"`, `"9inchV2"`) */
+  name: string;
+  /** On-chain adapter contract address */
+  address: string;
+}
+
+/** Response from `GET /swap/adapters` */
+export interface AdaptersResponse {
+  adapters: AdapterInfo[];
+}
+
+// -- Check Tax endpoint --
+
+/** Response from `GET /swap/checkTax` */
+export interface CheckTaxResponse {
+  /** Lowercased token address that was checked */
+  token: string;
+  /** Whether this token has a non-zero transfer tax */
+  isTaxToken: boolean;
+  /** Buy tax in basis points (applied when the token is the output) */
+  buyTaxBps: number;
+  /** Sell tax in basis points (applied when the token is the input) */
+  sellTaxBps: number;
+}
+
+/** Type guard for CheckTaxResponse errors */
+export type CheckTaxResult = CheckTaxResponse | ErrorResponse;

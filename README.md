@@ -21,7 +21,8 @@ Switch-SDK/
 ├── examples/
 │   ├── swap-ethers.ts        # Complete swap example (ethers.js v6)
 │   ├── swap-web3py.py        # Complete swap example (web3.py)
-│   └── nextjs-proxy.ts       # Next.js API route proxy for key security
+│   ├── nextjs-proxy.ts       # Next.js API route proxy for key security
+│   └── react-hooks.tsx       # React hooks for quote, adapters & tax
 └── package.json
 ```
 
@@ -31,17 +32,20 @@ Switch-SDK/
 
 1. [Quickstart](#quickstart)
 2. [Authentication](#authentication)
-3. [Get Swap Quote](#get-swap-quote)
-4. [Executing a Swap](#executing-a-swap)
-5. [Important Notes](#important-notes)
-6. [Response Schema](#response-schema)
-7. [Tax Tokens (Fee-on-Transfer)](#tax-tokens-fee-on-transfer)
-8. [Error Handling](#error-handling)
-9. [Partner Fee Sharing](#partner-fee-sharing)
-10. [Constants & Addresses](#constants--addresses)
-11. [Full Integration Examples](#full-integration-examples)
-12. [Rate Limits](#rate-limits)
-13. [Support](#support)
+3. [Recommended Integration Flow](#recommended-integration-flow)
+4. [List Adapters](#list-adapters)
+5. [Check Token Tax](#check-token-tax)
+6. [Get Swap Quote](#get-swap-quote)
+7. [Executing a Swap](#executing-a-swap)
+8. [Important Notes](#important-notes)
+9. [Response Schema](#response-schema)
+10. [Tax Tokens (Fee-on-Transfer)](#tax-tokens-fee-on-transfer)
+11. [Error Handling](#error-handling)
+12. [Partner Fee Sharing](#partner-fee-sharing)
+13. [Constants & Addresses](#constants--addresses)
+14. [Full Integration Examples](#full-integration-examples)
+15. [Rate Limits](#rate-limits)
+16. [Support](#support)
 
 ---
 
@@ -65,16 +69,32 @@ The response `tx` field contains a fully-encoded `goSwitch()` call — just forw
 ### Using the SDK types (TypeScript)
 
 ```ts
-import type { BestPathResponse, SwapTransaction } from "@switch-win/sdk/types";
-import { SWITCH_ROUTER, NATIVE_PLS, API_BASE } from "@switch-win/sdk/constants";
+import type { BestPathResponse, CheckTaxResponse, AdaptersResponse } from "@switch-win/sdk/types";
+import { SWITCH_ROUTER, NATIVE_PLS, API_BASE, ADAPTERS_ENDPOINT, CHECK_TAX_ENDPOINT, QUOTE_ENDPOINT } from "@switch-win/sdk/constants";
 
-const res = await fetch(`${API_BASE}/swap/quote?network=pulsechain&from=${NATIVE_PLS}&to=0x95B3...&amount=1000000000000000000&sender=${wallet}`, {
-  headers: { "x-api-key": process.env.SWITCH_API_KEY! },
+// Step 1: Get adapters (cache this — rarely changes)
+const adaptersRes = await fetch(ADAPTERS_ENDPOINT, { headers: { "x-api-key": KEY } });
+const { adapters }: AdaptersResponse = await adaptersRes.json();
+
+// Step 2: Check taxes on both tokens
+const [fromTax, toTax] = await Promise.all([
+  fetch(`${CHECK_TAX_ENDPOINT}?token=${fromToken}&network=pulsechain`, { headers: { "x-api-key": KEY } }).then(r => r.json()) as Promise<CheckTaxResponse>,
+  fetch(`${CHECK_TAX_ENDPOINT}?token=${toToken}&network=pulsechain`, { headers: { "x-api-key": KEY } }).then(r => r.json()) as Promise<CheckTaxResponse>,
+]);
+
+// Step 3: Determine feeOnOutput and get quote
+const feeOnOutput = !toTax.isTaxToken; // example: avoid collecting tax tokens as fee
+const res = await fetch(`${QUOTE_ENDPOINT}?network=pulsechain&from=${fromToken}&to=${toToken}&amount=${amount}&sender=${wallet}&feeOnOutput=${feeOnOutput}`, {
+  headers: { "x-api-key": KEY },
 });
 const quote: BestPathResponse = await res.json();
 
+// Display expectedOutputAmount (most accurate estimate)
+console.log("Expected output:", quote.expectedOutputAmount);
+
 if (quote.tx) {
-  await signer.sendTransaction(quote.tx);
+  const chosenTx = feeOnOutput ? quote.txFeeOnOutput! : quote.tx;
+  await signer.sendTransaction(chosenTx);
 }
 ```
 
@@ -124,6 +144,212 @@ Your API key is a secret credential — **never expose it in client-side code** 
 
 ---
 
+## Recommended Integration Flow
+
+For the most accurate swap quotes — especially with tax tokens — follow this **three-step flow**:
+
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│  Step 1: GET /swap/adapters                                                │
+│  → Get available DEXes (cache for hours — rarely changes)                  │
+│  → Optionally let users disable specific DEXes                             │
+├────────────────────────────────────────────────────────────────────────────┤
+│  Step 2: GET /swap/checkTax?token=<fromToken>&network=pulsechain           │
+│          GET /swap/checkTax?token=<toToken>&network=pulsechain             │
+│  → Detect transfer taxes on both tokens                                    │
+│  → Determine feeOnOutput based on tax results + your fee strategy          │
+├────────────────────────────────────────────────────────────────────────────┤
+│  Step 3: GET /swap/quote?...&feeOnOutput=true/false&adapters=0,3,6        │
+│  → Pass feeOnOutput + adapter filter for an exact expectedOutputAmount     │
+│  → Display quote and execute swap                                          │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Why `feeOnOutput` matters for accuracy
+
+The SwitchRouter contract supports two fee modes:
+
+- **`feeOnOutput=true`** — The full input is routed through DEX pools, then the protocol fee is deducted from the output.
+- **`feeOnOutput=false`** — The protocol fee is deducted from the input *before* routing, and the reduced amount enters the DEX pools.
+
+Due to AMM curve concavity (Jensen's inequality), `AMM(amount × 0.9975) ≠ AMM(amount) × 0.9975`. This means the backend **must know which mode you'll use** to compute an exact `expectedOutputAmount`. If the backend routes as `feeOnOutput=true` but you send the `tx` (fee on input), the expected output will be slightly over-estimated (always in the user's favor — they receive more than quoted).
+
+By passing `feeOnOutput` explicitly, the backend adjusts routing to match the actual on-chain execution, giving you a spot-on estimate.
+
+### Determining `feeOnOutput` with tax tokens
+
+When tax tokens are involved, use the `checkTax` results to decide:
+
+```ts
+import type { CheckTaxResponse } from "@switch-win/sdk/types";
+import { NATIVE_PLS, WPLS } from "@switch-win/sdk/constants";
+
+function determineFeeOnOutput(
+  fromToken: string,
+  toToken: string,
+  fromTax: CheckTaxResponse,
+  toTax: CheckTaxResponse,
+): boolean {
+  const plsAddresses = [NATIVE_PLS.toLowerCase(), WPLS.toLowerCase()];
+  const fromAddr = fromToken.toLowerCase();
+  const toAddr = toToken.toLowerCase();
+
+  // If selling a tax token, fee on output avoids the fee amount being further
+  // reduced by the sell tax (sell tax reduces input, fee then applies to output).
+  if (fromTax.isTaxToken && fromTax.sellTaxBps > 0) {
+    if (toTax.isTaxToken && toTax.buyTaxBps > 0) {
+      // Both sides are tax tokens — fee on output keeps the fee in the output token
+      return true;
+    }
+    return true;
+  }
+
+  // If buying a tax token (but selling a non-tax token), fee on input is cleaner
+  if (toTax.isTaxToken && toTax.buyTaxBps > 0) {
+    return false;
+  }
+
+  // No tax tokens — decide based on PLS preference:
+  // Buying PLS → fee on output (collect PLS)
+  if (plsAddresses.includes(toAddr)) return true;
+  // Selling PLS → fee on input (collect PLS)
+  if (plsAddresses.includes(fromAddr)) return false;
+
+  // Default: fee on output
+  return true;
+}
+```
+
+---
+
+## List Adapters
+
+```
+GET /swap/adapters
+```
+
+Returns all available DEX adapters with their on-chain indices and contract addresses. Use the indices to filter which DEXes the router considers via the `adapters` query param on `/swap/quote`.
+
+### Authentication
+
+Requires API key (same as all endpoints).
+
+### Example Request
+
+```bash
+curl -H "x-api-key: YOUR_KEY" "https://quote.switch.win/swap/adapters"
+```
+
+### Example Response
+
+```json
+{
+  "adapters": [
+    { "index": 0,  "name": "UniswapV2",    "address": "0x8730c3e2cf2c8cda8e6166837a1ed26f46aa9e59" },
+    { "index": 1,  "name": "SushiV2",      "address": "0xff6b56d3f444eb5b7fa1db047f57140c84810376" },
+    { "index": 2,  "name": "PulseXV1",     "address": "0xc8c50c6fac75b0d082d5b99f52581ca25ccb719f" },
+    { "index": 3,  "name": "PulseXV2",     "address": "0x5d3ef85adcf1532e9111e4a6a331f6e5ddfb2d25" },
+    { "index": 4,  "name": "9inchV2",      "address": "0xcaa612cde3d3fbe97be97eb5f79bc91597432d55" },
+    { "index": 5,  "name": "DextopV2",     "address": "0x72d8f2b9cfb9cfd73403288a126578b7e31ee6ac" },
+    { "index": 6,  "name": "UniswapV3",    "address": "0x7bbb21bdc6c94b90367a0b1835e1f233ab39d6a7" },
+    { "index": 7,  "name": "9mmV3",        "address": "0x42cf246e6271feb2c3e6d14fc405ed0bf5152be2" },
+    { "index": 8,  "name": "9inchV3",      "address": "0xbb017a0da988b72f202cd19655361cdb57383802" },
+    { "index": 9,  "name": "pDexV3",       "address": "0xb2141992cb4500e7099bc6d7d3da405e63259dcf" },
+    { "index": 10, "name": "DextopV3",     "address": "0xe3073faaed1490eab7b3e65f2a1659c9853d5379" },
+    { "index": 11, "name": "Phux",         "address": "0xe9a3aefd86b9230abc980c012b28e39f8561682c" },
+    { "index": 12, "name": "Tide",         "address": "0x235ba14f6df83c17353e410e5a2dcc052a5a0f64" },
+    { "index": 13, "name": "PulseXStable", "address": "0xac4da986100724983042ec28c28db243e2f828cb" }
+  ]
+}
+```
+
+### Using adapter indices to filter routing
+
+Pass adapter indices as a comma-separated `adapters` param to `/swap/quote`:
+
+```bash
+# Route only through PulseXV2 (index 3):
+GET /swap/quote?...&adapters=3
+
+# Route through PulseXV2 + UniswapV3:
+GET /swap/quote?...&adapters=3,6
+
+# Exclude nothing (default — omit the param):
+GET /swap/quote?...
+```
+
+This is useful for building a DEX toggle UI where users can enable/disable specific liquidity sources.
+
+---
+
+## Check Token Tax
+
+```
+GET /swap/checkTax
+```
+
+Detects whether a token has a fee-on-transfer mechanism (tax token) and returns the buy/sell tax rates in basis points. Use this **before** fetching a quote to:
+
+1. Display a tax warning to the user
+2. Determine the optimal `feeOnOutput` mode
+3. Pass that mode to `/swap/quote` for an exact estimate
+
+### Query Parameters
+
+| Parameter | Required | Type | Description |
+|---|---|---|---|
+| `token` | **Yes** | address | Token address to check (0x + 40 hex chars) |
+| `network` | No | string | Target blockchain. Currently only `"pulsechain"`. |
+
+### Latency
+
+| Scenario | Typical Latency |
+|---|---|
+| Cached result (previously checked token) | **< 1 ms** |
+| Uncached (first check for this token) | **50–200 ms** |
+
+Tax results are cached server-side, so repeated checks for the same token are essentially free. You can safely call this for both `from` and `to` tokens in parallel before every quote.
+
+### Example Request
+
+```bash
+curl -H "x-api-key: YOUR_KEY" \
+  "https://quote.switch.win/swap/checkTax?token=0x95B303987A60C71504D99Aa1b13B4DA07b0790ab&network=pulsechain"
+```
+
+### Example Response (non-tax token)
+
+```json
+{
+  "token": "0x95b303987a60c71504d99aa1b13b4da07b0790ab",
+  "isTaxToken": false,
+  "buyTaxBps": 0,
+  "sellTaxBps": 0
+}
+```
+
+### Example Response (tax token)
+
+```json
+{
+  "token": "0x1234567890abcdef1234567890abcdef12345678",
+  "isTaxToken": true,
+  "buyTaxBps": 500,
+  "sellTaxBps": 300
+}
+```
+
+In this example, the token has a 5% buy tax and a 3% sell tax.
+
+### Error Responses
+
+| Error | Cause |
+|---|---|
+| `"Invalid or missing token address (must be 0x + 40 hex chars)"` | Missing or malformed `token` param |
+| `"This network is not supported at this time."` | Unsupported `network` value |
+
+---
+
 ## Get Swap Quote
 
 ```
@@ -145,13 +371,15 @@ Returns the optimal split-route for a swap and (optionally) a ready-to-send tran
 | `slippage` | No | integer | `50` | Slippage tolerance in **basis points** (bps). `50` = 0.50 %. Range: `0`–`5000`. |
 | `fee` | No | integer | `25` | Protocol fee in basis points (0.25 %). Range: `25`–`100`. Defaults to `25` if omitted. |
 | `partnerAddress` | No | address | `0x0…0` | Your partner wallet to receive 50 % of collected fees. Omit or pass `0x0` for no partner. |
+| `feeOnOutput` | No | string | `"false"` | Controls fee mode. `"true"` = fee deducted from output. `"false"` = fee deducted from input (default). Affects `expectedOutputAmount` accuracy — see [Recommended Integration Flow](#recommended-integration-flow). |
+| `adapters` | No | string | — | Comma-separated adapter indices to restrict routing (e.g. `"3"` for PulseXV2 only, `"3,6"` for PulseXV2 + UniswapV3). Get available indices from `/swap/adapters`. |
 
 > \* If `sender` is omitted, the response will still contain routing data, `minAmountOut`, and tax info, but the `tx` object will be absent. This is useful for **showing estimated swap output before the user connects their wallet** — you can display prices, routes, and tax warnings without requiring a wallet connection. Once the user connects, re-fetch the quote with `sender` to get the ready-to-send `tx` object.
 
 ### Example Request
 
 ```
-GET /swap/quote?network=pulsechain&from=0xA1077a294dDE1B09bB078844df40758a5D0f9a27&to=0x95B303987A60C71504D99Aa1b13B4DA07b0790ab&amount=1000000000000000000&sender=0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045&slippage=100&fee=30&partnerAddress=0xYourPartnerWallet
+GET /swap/quote?network=pulsechain&from=0xA1077a294dDE1B09bB078844df40758a5D0f9a27&to=0x95B303987A60C71504D99Aa1b13B4DA07b0790ab&amount=1000000000000000000&sender=0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045&slippage=100&fee=30&partnerAddress=0xYourPartnerWallet&feeOnOutput=true
 ```
 
 ### Example Response
@@ -163,6 +391,7 @@ GET /swap/quote?network=pulsechain&from=0xA1077a294dDE1B09bB078844df40758a5D0f9a
   "receiver": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
   "totalAmountIn": "1000000000000000000",
   "totalAmountOut": "52934810000000000000",
+  "expectedOutputAmount": "52801533000000000000",  // after sell tax + protocol fee + buy tax (no slippage)
   "minAmountOut": "52405461900000000000",   // totalAmountOut adjusted for tax + fee + slippage
   "fromTokenTax": { "isTaxToken": false, "buyTaxBps": 0, "sellTaxBps": 0 },
   "toTokenTax":   { "isTaxToken": false, "buyTaxBps": 0, "sellTaxBps": 0 },
@@ -317,6 +546,7 @@ The API automatically detects tax tokens via empirical simulation and returns th
 | `toTokenTax.buyTaxBps` | Buy tax applied when `toToken` is the output (e.g. 500 = 5%) |
 | `effectiveSlippageBps` | User slippage + sell tax + buy tax in basis points |
 | `effectiveSlippagePercent` | Same as above, as a human-readable `%` string (e.g. `"1.7"`) |
+| `expectedOutputAmount` | Best estimate of what the user actually receives (after taxes + fee, before slippage). Display this in your UI. |
 | `minAmountOut` | Minimum output with taxes + fee + slippage already applied — use this directly |
 
 **UI recommendations:**
@@ -428,6 +658,7 @@ If the transaction reverts, the SwitchRouter contract returns one of these custo
 | `receiver` | `string?` | Recipient address for output tokens. Same as `sender` unless a custom `receiver` was specified. |
 | `totalAmountIn` | `string` | Total input amount in wei |
 | `totalAmountOut` | `string` | Raw DEX output in wei — reflects price impact only (before taxes, fees, and slippage) |
+| `expectedOutputAmount` | `string` | Expected output the user will actually receive, in wei. Accounts for sell tax, protocol fee, and buy tax — but NOT slippage. This is the most accurate value to display as the estimated received amount. When `feeOnOutput` is passed correctly, this is **exact** (matches on-chain execution). |
 | `minAmountOut` | `string` | Minimum acceptable output after token taxes, fee, and slippage. When tax tokens are involved: `totalAmountOut × (10000 − sellTaxBps) / 10000 × (10000 − feeBps) / 10000 × (10000 − buyTaxBps) / 10000 × (10000 − slippageBps) / 10000`. This is the value encoded in the `tx` calldata as `_minTotalAmountOut`. |
 | `paths` | `SwapPath[]` | Human-readable path descriptions |
 | `routeAllocation` | `RouteAllocationPlan` | Structured route breakdown (matches on-chain structs) |
@@ -734,9 +965,10 @@ Complete runnable examples are in the [`examples/`](examples/) directory:
 
 | File | Language | Description |
 |---|---|---|
-| [`swap-ethers.ts`](examples/swap-ethers.ts) | TypeScript | Full swap flow with ethers.js v6 (quote → approve → send) |
-| [`swap-web3py.py`](examples/swap-web3py.py) | Python | Full swap flow with web3.py |
-| [`nextjs-proxy.ts`](examples/nextjs-proxy.ts) | TypeScript | Next.js API route proxy to keep your API key server-side |
+| [`swap-ethers.ts`](examples/swap-ethers.ts) | TypeScript | Full 5-step swap flow with ethers.js v6 (adapters → checkTax → quote → approve → send) |
+| [`swap-web3py.py`](examples/swap-web3py.py) | Python | Full 5-step swap flow with web3.py |
+| [`nextjs-proxy.ts`](examples/nextjs-proxy.ts) | TypeScript | Next.js catch-all proxy for `/swap/*` endpoints (keeps API key server-side) |
+| [`react-hooks.tsx`](examples/react-hooks.tsx) | React/TSX | `useAdapters`, `useCheckTax`, `useSwapQuote` hooks + example `SwapCard` component |
 
 ---
 

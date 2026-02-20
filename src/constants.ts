@@ -9,17 +9,28 @@
  * ```
  */
 
-// ── API ─────────────────────────────────────────────────────────────
+// ── API --
 
 /** Base URL for the Switch quote API */
 export const API_BASE = "https://quote.switch.win";
 
-// ── Chain ───────────────────────────────────────────────────────────
+// ── API Endpoints --
+
+/** Swap quote endpoint — returns optimal routing and tx calldata */
+export const QUOTE_ENDPOINT = `${API_BASE}/swap/quote`;
+
+/** Adapters endpoint — lists all available DEX adapters */
+export const ADAPTERS_ENDPOINT = `${API_BASE}/swap/adapters`;
+
+/** Check Tax endpoint — detects fee-on-transfer tokens */
+export const CHECK_TAX_ENDPOINT = `${API_BASE}/swap/checkTax`;
+
+// ── Chain --
 
 /** PulseChain chain ID */
 export const CHAIN_ID = 369;
 
-// ── Contract addresses ──────────────────────────────────────────────
+// ── Contract addresses --
 
 /** SwitchRouter contract — target for all swap transactions */
 export const SWITCH_ROUTER = "0x69033829f50244FD1be7BDC8e74aE0fF97E47126";
@@ -33,7 +44,7 @@ export const NATIVE_PLS = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
 /** Wrapped PLS (WPLS) ERC-20 token address */
 export const WPLS = "0xA1077a294dDE1B09bB078844df40758a5D0f9a27";
 
-// ── Fee constants ───────────────────────────────────────────────────
+// ── Fee constants --
 
 /** Fee denominator — all fees are in basis points (1 bps = 0.01%) */
 export const FEE_DENOMINATOR = 10_000;
@@ -47,7 +58,7 @@ export const MAX_SLIPPAGE_BPS = 5_000;
 /** Default slippage if not specified (basis points). 50 bps = 0.50% */
 export const DEFAULT_SLIPPAGE_BPS = 50;
 
-// ── Well-known tokens ───────────────────────────────────────────────
+// ── Well-known tokens --
 
 /** Well-known blue-chip tokens on PulseChain (lowercased for easy comparison) */
 export const BLUE_CHIPS = new Set([
@@ -61,7 +72,7 @@ export const BLUE_CHIPS = new Set([
   "0x02dcdd04e3f455d838cd1249292c58f3b79e3c3c", // WETH (bridged)
 ]);
 
-// ── ABIs ────────────────────────────────────────────────────────────
+// ── ABIs --
 
 /**
  * Minimal ERC-20 ABI for approval and allowance checks.
