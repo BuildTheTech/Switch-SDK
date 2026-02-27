@@ -7,7 +7,7 @@
 
 Everything partners need to integrate Switch swaps and limit orders — API docs, TypeScript types, ABIs, constants, and ready-to-use examples.
 
-**Swap API:** `https://quote.switch.win` &nbsp;|&nbsp; **Limit Order API:** `https://api.switch.win` &nbsp;|&nbsp; **Chain:** PulseChain (369)
+**Swap API:** `https://quote.switch.win` &nbsp;|&nbsp; **Limit Order API:** `https://quote.switch.win` &nbsp;|&nbsp; **Chain:** PulseChain (369)
 
 ---
 
@@ -900,7 +900,7 @@ All constants are importable from [`src/constants.ts`](src/constants.ts).
 | **Min fee** | `30` bps (0.30 %) — enforced on-chain by `MIN_FEE` |
 | **Default slippage** | `50` bps (0.50 %) |
 | **Swap API base** | `https://quote.switch.win` |
-| **Limit Order API base** | `https://api.switch.win` |
+| **Limit Order API base** | `https://quote.switch.win` |
 
 ---
 

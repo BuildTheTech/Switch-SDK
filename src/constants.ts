@@ -65,7 +65,7 @@ export const SWITCH_PLS_FLOW = "0x0fD3fD40F06159606165F21047B83136172273E3";
 // ── Limit Order API endpoints ───────────────────────────────────────────────
 
 /** Base URL for the Switch backend API (limit orders) */
-export const LIMIT_ORDER_API_BASE = "https://api.switch.win";
+export const LIMIT_ORDER_API_BASE = "https://quote.switch.win";
 
 /** Limit orders REST endpoint */
 export const LIMIT_ORDERS_ENDPOINT = `${LIMIT_ORDER_API_BASE}/limit-orders`;

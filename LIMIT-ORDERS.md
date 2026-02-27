@@ -2,7 +2,7 @@
 
 > **Gasless EIP-712 signed limit orders on PulseChain**
 
-**Limit Order API:** `https://api.switch.win` &nbsp;|&nbsp; **Chain:** PulseChain (369)
+**Limit Order API:** `https://quote.switch.win` &nbsp;|&nbsp; **Chain:** PulseChain (369)
 
 ---
 
@@ -428,7 +428,7 @@ for (const nonce of nonces) {
 
 ## API Reference
 
-**Base URL:** `https://api.switch.win`
+**Base URL:** `https://quote.switch.win`
 
 | Method | Path | Description |
 |---|---|---|
