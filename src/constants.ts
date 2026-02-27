@@ -33,7 +33,7 @@ export const CHAIN_ID = 369;
 // ── Contract addresses --
 
 /** SwitchRouter contract — target for all swap transactions */
-export const SWITCH_ROUTER = "0x69033829f50244FD1be7BDC8e74aE0fF97E47126";
+export const SWITCH_ROUTER = "0x31077B259e7fEEB7bE39bF298274BaE94Ee57B7a";
 
 /**
  * Native PLS sentinel address.
@@ -43,6 +43,38 @@ export const NATIVE_PLS = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
 
 /** Wrapped PLS (WPLS) ERC-20 token address */
 export const WPLS = "0xA1077a294dDE1B09bB078844df40758a5D0f9a27";
+
+// ── Limit Order contract ────────────────────────────────────────────────
+
+/**
+ * SwitchLimitOrder contract address on PulseChain.
+ *
+ * The EIP-712 domain `verifyingContract` MUST match this address.
+ */
+export const SWITCH_LIMIT_ORDER = "0x28754379e9E9867A64b77437930cBc5009939692";
+
+/**
+ * SwitchPLSFlow contract address on PulseChain.
+ *
+ * Used for native PLS limit orders. Users send PLS to this contract,
+ * which wraps to WPLS and creates the limit order on their behalf.
+ * No EIP-712 signing required — single transaction.
+ */
+export const SWITCH_PLS_FLOW = "0x0fD3fD40F06159606165F21047B83136172273E3";
+
+// ── Limit Order API endpoints ───────────────────────────────────────────────
+
+/** Base URL for the Switch backend API (limit orders) */
+export const LIMIT_ORDER_API_BASE = "https://api.switch.win";
+
+/** Limit orders REST endpoint */
+export const LIMIT_ORDERS_ENDPOINT = `${LIMIT_ORDER_API_BASE}/limit-orders`;
+
+/** Limit order pairs endpoint */
+export const LIMIT_ORDER_PAIRS_ENDPOINT = `${LIMIT_ORDERS_ENDPOINT}/pairs`;
+
+/** Limit order stats endpoint */
+export const LIMIT_ORDER_STATS_ENDPOINT = `${LIMIT_ORDERS_ENDPOINT}/stats`;
 
 // ── Fee constants --
 
@@ -65,8 +97,8 @@ export const BLUE_CHIPS = new Set([
   "0xefd766ccb38eaf1dfd701853bfce31359239f305", // DAI (bridged)
   "0x15d38573d2feeb82e7ad5187ab8c1d52810b1f07", // USDC (bridged)
   "0x0cb6f5a34ad42ec934882a05265a7d5f59b51a2f", // USDT (bridged)
-  "0x2b591e99afe9f32eaa6214f7b7629768c40eeb39", // eHEX
-  "0x57fde0a71132198bbec939b98976993d8d89d225", // pHEX
+  "0x2b591e99afe9f32eaa6214f7b7629768c40eeb39", // pHEX
+  "0x57fde0a71132198bbec939b98976993d8d89d225", // eHEX
   "0x95b303987a60c71504d99aa1b13b4da07b0790ab", // PLSX
   "0x2fa878ab3f87cc1c9737fc071108f904c0b0c95d", // INC
   "0x02dcdd04e3f455d838cd1249292c58f3b79e3c3c", // WETH (bridged)
@@ -108,4 +140,99 @@ export const SWITCH_ROUTER_ERRORS = [
   "error InsufficientFee()",
   "error MsgValueMismatch()",
   "error ZeroInput()",
+] as const;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Limit Order — EIP-712 Constants
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * EIP-712 domain for SwitchLimitOrder.
+ *
+ * Must match the domain used in the contract's constructor:
+ * `EIP712("SwitchLimitOrder", "2")`
+ *
+ * **Important:** Update `verifyingContract` when the contract is deployed.
+ */
+export const LIMIT_ORDER_EIP712_DOMAIN = {
+  name: "SwitchLimitOrder",
+  version: "2",
+  chainId: CHAIN_ID,
+  verifyingContract: SWITCH_LIMIT_ORDER,
+} as const;
+
+/**
+ * EIP-712 type definition for the LimitOrder struct.
+ *
+ * Used with `ethers.signTypedData(domain, types, value)` or equivalent.
+ * Must match the struct order and types in `SwitchLimitOrder.sol`.
+ */
+export const LIMIT_ORDER_EIP712_TYPES = {
+  LimitOrder: [
+    { name: "maker", type: "address" },
+    { name: "tokenIn", type: "address" },
+    { name: "tokenOut", type: "address" },
+    { name: "amountIn", type: "uint256" },
+    { name: "minAmountOut", type: "uint256" },
+    { name: "deadline", type: "uint256" },
+    { name: "nonce", type: "uint256" },
+    { name: "feeOnOutput", type: "bool" },
+    { name: "recipient", type: "address" },
+    { name: "unwrapOutput", type: "bool" },
+  ],
+} as const;
+
+/**
+ * Minimal ABI for the SwitchLimitOrder contract.
+ *
+ * Includes only the functions relevant to order makers:
+ * - `invalidateNonce(uint256)` — cancel a single order on-chain
+ * - `invalidateNonces(uint256[])` — cancel multiple orders on-chain
+ * - `isNonceUsed(address,uint256)` — check if a nonce has been used
+ * - `canFillOrder(order,signature)` — check if an order is fillable
+ *
+ * The full ABI is available at `@switch-win/sdk/abi/limit-order`.
+ */
+export const LIMIT_ORDER_ABI = [
+  "function invalidateNonce(uint256 _nonce) external",
+  "function invalidateNonces(uint256[] calldata _nonces) external",
+  "function isNonceUsed(address maker, uint256 nonce) view returns (bool)",
+  "function canFillOrder(tuple(address maker, address tokenIn, address tokenOut, uint256 amountIn, uint256 minAmountOut, uint256 deadline, uint256 nonce, bool feeOnOutput, address recipient, bool unwrapOutput) order, bytes signature) view returns (bool)",
+] as const;
+
+/**
+ * SwitchLimitOrder custom error signatures for decoding reverts.
+ */
+export const LIMIT_ORDER_ERRORS = [
+  "error ExcessiveFee()",
+  "error InsufficientOutput()",
+  "error InvalidAmount()",
+  "error InvalidSignature()",
+  "error InvalidTokens()",
+  "error NonceAlreadyUsed()",
+  "error OrderExpired()",
+  "error RouteInputExceedsMax()",
+  "error TransferFailed()",
+] as const;
+
+/**
+ * Minimal ABI for the SwitchPLSFlow contract.
+ *
+ * Used for creating native PLS limit orders in a single transaction.
+ * The contract wraps PLS to WPLS and places the limit order on behalf
+ * of the sender.
+ */
+export const PLS_FLOW_ABI = [
+  "function createOrder(address tokenOut, uint256 minAmountOut, uint256 deadline, bool feeOnOutput, bool unwrapOutput) payable returns (uint256 nonce)",
+  "function cancelOrder(uint256 nonce) external",
+  "function orderNonces(address owner) view returns (uint256)",
+  "event PLSOrderCreated(address indexed owner, uint256 indexed nonce, address tokenOut, uint256 amountIn, uint256 minAmountOut, uint256 deadline, bool feeOnOutput, bool unwrapOutput)",
+] as const;
+
+/**
+ * SwitchPLSFlow custom error signatures for decoding reverts.
+ */
+export const PLS_FLOW_ERRORS = [
+  "error ZeroAmountIn()",
+  "error InvalidTokenOut()",
 ] as const;

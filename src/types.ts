@@ -251,3 +251,173 @@ export interface CheckTaxResponse {
 
 /** Type guard for CheckTaxResponse errors */
 export type CheckTaxResult = CheckTaxResponse | ErrorResponse;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Limit Orders (V2 — EIP-712 signed, approve-only)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// -- Order parameters --
+
+/**
+ * Parameters for a limit order — the fields the maker signs via EIP-712.
+ *
+ * All amounts are raw integer strings in wei (same convention as swap quotes).
+ * The `nonce` MUST be unique per maker — once used (filled or cancelled) it
+ * cannot be reused.
+ */
+export interface LimitOrderParams {
+  /** Maker (signer) address */
+  maker: string;
+  /** Input token address (token the maker is selling) */
+  tokenIn: string;
+  /** Output token address (token the maker wants to receive) */
+  tokenOut: string;
+  /** Amount of tokenIn the maker is offering (wei) */
+  amountIn: string;
+  /** Minimum amount of tokenOut the maker will accept (wei) */
+  minAmountOut: string;
+  /**
+   * Unix timestamp after which the order expires. Set to `0` for no expiry.
+   * The contract will revert with `OrderExpired()` if `block.timestamp > deadline` (when > 0).
+   */
+  deadline: number;
+  /**
+   * Unique nonce per maker. Once a nonce is used (filled or cancelled on-chain),
+   * it cannot be reused. Use `Date.now()` or a random integer for uniqueness.
+   */
+  nonce: number;
+  /**
+   * If `true`, the contract fee is deducted from the output (tokenOut) instead
+   * of the input (tokenIn). Same concept as swap fee modes.
+   */
+  feeOnOutput: boolean;
+  /**
+   * Address that receives the output tokens. Defaults to the maker if set
+   * to the zero address (`0x0000…`).
+   */
+  recipient: string;
+  /**
+   * If `true` and tokenOut is WPLS, the contract unwraps to native PLS
+   * before sending to the recipient.
+   */
+  unwrapOutput: boolean;
+}
+
+/**
+ * A signed limit order — the order parameters plus the EIP-712 signature.
+ * This is what gets submitted to the Switch backend via `POST /limit-orders`.
+ */
+export interface SignedLimitOrder extends LimitOrderParams {
+  /** EIP-712 signature of the order struct, produced by the maker's wallet */
+  signature: string;
+}
+
+// -- API request/response types --
+
+/** Body for `POST /limit-orders` */
+export type CreateLimitOrderRequest = SignedLimitOrder;
+
+/** Body for `DELETE /limit-orders` */
+export interface CancelLimitOrderRequest {
+  /** Maker address */
+  maker: string;
+  /** Nonce of the order to cancel */
+  nonce: number;
+}
+
+/** Order status in the backend database */
+export type LimitOrderStatus = "ACTIVE" | "FILLED" | "CANCELLED" | "EXPIRED";
+
+/**
+ * A limit order record as returned by the Switch backend API.
+ *
+ * Includes all order parameters plus metadata fields added by the backend.
+ */
+export interface LimitOrderRecord {
+  /** Unique database ID (cuid) */
+  id: string;
+  /** Maker address (lowercased) */
+  maker: string;
+  /** Recipient address (lowercased) */
+  recipient: string;
+  /** Input token address (lowercased) */
+  tokenIn: string;
+  /** Output token address (lowercased) */
+  tokenOut: string;
+  /** Input amount in wei */
+  amountIn: string;
+  /** Minimum output amount in wei */
+  minAmountOut: string;
+  /** Expiry timestamp (0 = no expiry) */
+  deadline: number;
+  /** Unique nonce for this maker */
+  nonce: number;
+  /** Fee mode flag */
+  feeOnOutput: boolean;
+  /** Unwrap output to native PLS flag */
+  unwrapOutput: boolean;
+  /** EIP-712 signature */
+  signature: string;
+  /** Pair key in format `tokenIn:tokenOut` (lowercased) */
+  pairKey: string;
+  /** Current order status */
+  status: LimitOrderStatus;
+  /** ISO 8601 creation timestamp */
+  createdAt: string;
+  /** ISO 8601 last update timestamp */
+  updatedAt: string;
+  /** Block number where the order was filled (if status is FILLED) */
+  filledBlock?: number | null;
+  /** Transaction hash of the fill (if status is FILLED) */
+  filledTxHash?: string | null;
+}
+
+/** Response from `POST /limit-orders` (success) */
+export interface CreateLimitOrderResponse {
+  success: true;
+  order: LimitOrderRecord;
+}
+
+/** Response from `DELETE /limit-orders` (success) */
+export interface CancelLimitOrderResponse {
+  success: true;
+}
+
+/** Response from `GET /limit-orders` */
+export interface ListLimitOrdersResponse {
+  /** Total matching orders */
+  total: number;
+  /** Page size used */
+  limit: number;
+  /** Page offset used */
+  offset: number;
+  /** Array of order records */
+  orders: LimitOrderRecord[];
+}
+
+/** Response from `GET /limit-orders/pairs` */
+export interface LimitOrderPair {
+  /** Pair key in format `tokenIn:tokenOut` */
+  pairKey: string;
+  /** Input token address */
+  tokenIn: string;
+  /** Output token address */
+  tokenOut: string;
+  /** Number of active orders for this pair */
+  activeOrders: number;
+}
+
+/** Response from `GET /limit-orders/stats` */
+export interface LimitOrderStats {
+  active: number;
+  filled: number;
+  cancelled: number;
+  expired: number;
+  total: number;
+}
+
+/** Union type for limit order mutation responses */
+export type LimitOrderMutationResponse =
+  | CreateLimitOrderResponse
+  | CancelLimitOrderResponse
+  | ErrorResponse;

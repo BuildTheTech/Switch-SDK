@@ -13,7 +13,7 @@
  *
  * Frontend usage:
  *   const quote    = await fetch("/api/swap/quote?network=pulsechain&from=0x...&to=0x...&amount=1000&sender=0x...");
- *   const adapters = await fetch("/api/swap/adapters");
+ *   const adapters = await fetch("/api/swap/adapters?network=pulsechain");
  *   const tax      = await fetch("/api/swap/checkTax?token=0x...&network=pulsechain");
  */
 

@@ -98,7 +98,9 @@ async function main() {
 
   // ── Step 1: Fetch available adapters (optional — cache this) ──
   console.log("\n── Step 1: Fetching adapters ──");
-  const { adapters } = await apiFetch<AdaptersResponse>(ADAPTERS_ENDPOINT);
+  const { adapters } = await apiFetch<AdaptersResponse>(
+    `${ADAPTERS_ENDPOINT}?network=pulsechain`,
+  );
   console.log(`Available DEXes: ${adapters.map((a) => a.name).join(", ")}`);
 
   // ── Step 2: Check token taxes --

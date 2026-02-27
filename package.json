@@ -1,7 +1,7 @@
 {
   "name": "@switch-win/sdk",
   "version": "1.0.0",
-  "description": "Official integration kit for the Switch DEX Aggregator on PulseChain — types, constants, ABIs, and examples",
+  "description": "Official integration kit for the Switch DEX Aggregator on PulseChain — types, constants, ABIs, limit orders, and examples",
   "author": "BuildTheTech",
   "license": "MIT",
   "repository": {
@@ -14,6 +14,8 @@
     "aggregator",
     "pulsechain",
     "swap",
+    "limit-order",
+    "eip712",
     "defi",
     "sdk"
   ],
@@ -24,7 +26,9 @@
     ".": "./src/index.ts",
     "./types": "./src/types.ts",
     "./constants": "./src/constants.ts",
-    "./abi": "./abi/SwitchRouterABI.json"
+    "./limit-orders": "./src/limit-orders.ts",
+    "./abi": "./abi/SwitchRouterABI.json",
+    "./abi/limit-order": "./abi/SwitchLimitOrderABI.json"
   },
   "files": [
     "src/",

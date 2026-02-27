@@ -108,7 +108,7 @@ export function useAdapters() {
 
   useEffect(() => {
     let cancelled = false;
-    apiFetch<AdaptersResponse>("/adapters")
+    apiFetch<AdaptersResponse>("/adapters?network=pulsechain")
       .then((data) => {
         if (!cancelled) {
           setAdapters(data.adapters);
