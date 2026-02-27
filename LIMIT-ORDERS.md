@@ -8,6 +8,7 @@
 
 ## Table of Contents
 
+0. [Installation](#installation)
 1. [Overview](#overview)
 2. [How It Works](#how-it-works)
 3. [Creating a Limit Order](#creating-a-limit-order)
@@ -20,6 +21,18 @@
 10. [Helper Functions](#helper-functions)
 11. [EIP-712 Signing Details](#eip-712-signing-details)
 12. [On-Chain Revert Errors](#on-chain-revert-errors)
+
+---
+
+## Installation
+
+```bash
+npm install @switch-win/sdk
+# or
+yarn add @switch-win/sdk
+# or
+pnpm add @switch-win/sdk
+```
 
 ---
 

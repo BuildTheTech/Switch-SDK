@@ -1,5 +1,8 @@
 # Switch SDK
 
+[![npm version](https://img.shields.io/npm/v/@switch-win/sdk.svg)](https://www.npmjs.com/package/@switch-win/sdk)
+[![npm downloads](https://img.shields.io/npm/dm/@switch-win/sdk.svg)](https://www.npmjs.com/package/@switch-win/sdk)
+
 > **Official integration kit for the Switch DEX Aggregator on PulseChain**
 
 Everything partners need to integrate Switch swaps and limit orders — API docs, TypeScript types, ABIs, constants, and ready-to-use examples.
@@ -35,6 +38,8 @@ Switch-SDK/
 
 ## Table of Contents
 
+0. [Installation](#installation)
+
 ### Swaps
 
 1. [Quickstart](#quickstart)
@@ -54,6 +59,18 @@ Switch-SDK/
 9. [Full Integration Examples](#full-integration-examples)
 10. [Rate Limits](#rate-limits)
 11. [Support](#support)
+
+---
+
+## Installation
+
+```bash
+npm install @switch-win/sdk
+# or
+yarn add @switch-win/sdk
+# or
+pnpm add @switch-win/sdk
+```
 
 ---
 
