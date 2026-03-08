@@ -821,7 +821,7 @@
     },
     {
         "type":  "event",
-        "name":  "SwitchSwap",
+        "name":  "Switched",
         "inputs":  [
                        {
                            "name":  "_tokenIn",

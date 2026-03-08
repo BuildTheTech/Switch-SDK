@@ -616,14 +616,15 @@ GET /swap/quote?network=pulsechain&from=0xA1077a294dDE1B09bB078844df40758a5D0f9a
     ]
   },
   // Transaction object — only present when `sender` is provided
+  // ⚠️ Always use tx.to from this response — do NOT hardcode the router address
   "tx": {
-    "to": "0x31077B259e7fEEB7bE39bF298274BaE94Ee57B7a",
+    "to": "0x99999d19eC98F936934e029e63D1C0A127a15207",
     "data": "0x...",     // ABI-encoded goSwitch() calldata with feeOnOutput = false
     "value": "0"          // "0" for ERC-20 input; amountIn for native PLS input
   },
   // Same swap but with fee taken from the output token instead
   "txFeeOnOutput": {
-    "to": "0x31077B259e7fEEB7bE39bF298274BaE94Ee57B7a",
+    "to": "0x99999d19eC98F936934e029e63D1C0A127a15207",
     "data": "0x...",     // ABI-encoded goSwitch() calldata with feeOnOutput = true
     "value": "0"
   }
@@ -886,10 +887,12 @@ Covers: creating orders, approvals, `feeOnOutput` decision guide (tax tokens & o
 
 All constants are importable from [`src/constants.ts`](src/constants.ts).
 
+> **⚠️ Do not hardcode the SwitchRouter address.** The router contract may be redeployed from time to time. Always use the `tx.to` (or `txFeeOnOutput.to`) address returned by the `/bestPath` API response when building your transaction. This ensures your integration automatically picks up router upgrades without code changes.
+
 | Name | Value |
 |---|---|
 | **Chain** | PulseChain (Chain ID `369`) |
-| **SwitchRouter** | `0x31077B259e7fEEB7bE39bF298274BaE94Ee57B7a` |
+| **SwitchRouter** | `0x99999d19eC98F936934e029e63D1C0A127a15207` |
 | **SwitchLimitOrder** | `0x28754379e9E9867A64b77437930cBc5009939692` |
 | **SwitchPLSFlow** | `0x0fD3fD40F06159606165F21047B83136172273E3` |
 | **Native PLS sentinel** | `0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE` |
