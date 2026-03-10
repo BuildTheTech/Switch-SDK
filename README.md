@@ -893,8 +893,8 @@ All constants are importable from [`src/constants.ts`](src/constants.ts).
 |---|---|
 | **Chain** | PulseChain (Chain ID `369`) |
 | **SwitchRouter** | `0x99999d19eC98F936934e029e63D1C0A127a15207` |
-| **SwitchLimitOrder** | `0x28754379e9E9867A64b77437930cBc5009939692` |
-| **SwitchPLSFlow** | `0x0fD3fD40F06159606165F21047B83136172273E3` |
+| **SwitchLimitOrder** | `0x8FDA554D8bD5B3aEe699b2502C7248BF4205bbCd` |
+| **SwitchPLSFlow** | `0xF3c05d40412DBb6326B1C7dCf689445063b6BCE4` |
 | **Native PLS sentinel** | `0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE` |
 | **WPLS** | `0xA1077a294dDE1B09bB078844df40758a5D0f9a27` |
 | **Fee denominator** | `10000` (basis points) |

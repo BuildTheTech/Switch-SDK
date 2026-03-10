@@ -51,7 +51,7 @@ export const WPLS = "0xA1077a294dDE1B09bB078844df40758a5D0f9a27";
  *
  * The EIP-712 domain `verifyingContract` MUST match this address.
  */
-export const SWITCH_LIMIT_ORDER = "0x28754379e9E9867A64b77437930cBc5009939692";
+export const SWITCH_LIMIT_ORDER = "0x8FDA554D8bD5B3aEe699b2502C7248BF4205bbCd";
 
 /**
  * SwitchPLSFlow contract address on PulseChain.
@@ -60,7 +60,7 @@ export const SWITCH_LIMIT_ORDER = "0x28754379e9E9867A64b77437930cBc5009939692";
  * which wraps to WPLS and creates the limit order on their behalf.
  * No EIP-712 signing required — single transaction.
  */
-export const SWITCH_PLS_FLOW = "0x0fD3fD40F06159606165F21047B83136172273E3";
+export const SWITCH_PLS_FLOW = "0xF3c05d40412DBb6326B1C7dCf689445063b6BCE4";
 
 // ── Limit Order API endpoints ───────────────────────────────────────────────
 
@@ -179,6 +179,7 @@ export const LIMIT_ORDER_EIP712_TYPES = {
     { name: "feeOnOutput", type: "bool" },
     { name: "recipient", type: "address" },
     { name: "unwrapOutput", type: "bool" },
+    { name: "partnerAddress", type: "address" },
   ],
 } as const;
 
@@ -197,7 +198,7 @@ export const LIMIT_ORDER_ABI = [
   "function invalidateNonce(uint256 _nonce) external",
   "function invalidateNonces(uint256[] calldata _nonces) external",
   "function isNonceUsed(address maker, uint256 nonce) view returns (bool)",
-  "function canFillOrder(tuple(address maker, address tokenIn, address tokenOut, uint256 amountIn, uint256 minAmountOut, uint256 deadline, uint256 nonce, bool feeOnOutput, address recipient, bool unwrapOutput) order, bytes signature) view returns (bool)",
+  "function canFillOrder(tuple(address maker, address tokenIn, address tokenOut, uint256 amountIn, uint256 minAmountOut, uint256 deadline, uint256 nonce, bool feeOnOutput, address recipient, bool unwrapOutput, address partnerAddress) order, bytes signature) view returns (bool)",
 ] as const;
 
 /**
@@ -223,10 +224,10 @@ export const LIMIT_ORDER_ERRORS = [
  * of the sender.
  */
 export const PLS_FLOW_ABI = [
-  "function createOrder(address tokenOut, uint256 minAmountOut, uint256 deadline, bool feeOnOutput, bool unwrapOutput) payable returns (uint256 nonce)",
+  "function createOrder(address tokenOut, uint256 minAmountOut, uint256 deadline, bool feeOnOutput, bool unwrapOutput, address partnerAddress) payable returns (uint256 nonce)",
   "function cancelOrder(uint256 nonce) external",
   "function orderNonces(address owner) view returns (uint256)",
-  "event PLSOrderCreated(address indexed owner, uint256 indexed nonce, address tokenOut, uint256 amountIn, uint256 minAmountOut, uint256 deadline, bool feeOnOutput, bool unwrapOutput)",
+  "event PLSOrderCreated(address indexed owner, uint256 indexed nonce, address tokenOut, uint256 amountIn, uint256 minAmountOut, uint256 deadline, bool feeOnOutput, bool unwrapOutput, address partnerAddress)",
 ] as const;
 
 /**

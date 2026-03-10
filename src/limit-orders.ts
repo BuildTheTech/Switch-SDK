@@ -124,6 +124,11 @@ export interface BuildLimitOrderOptions {
    * before sending to the recipient. Default `false`.
    */
   unwrapOutput?: boolean;
+  /**
+   * Partner address to receive 50% of protocol fees.
+   * Defaults to the zero address (no partner).
+   */
+  partnerAddress?: string;
 }
 
 /**
@@ -157,6 +162,7 @@ export function buildLimitOrder(options: BuildLimitOrderOptions): LimitOrderPara
     feeOnOutput: options.feeOnOutput ?? false,
     recipient: options.recipient ?? options.maker,
     unwrapOutput: options.unwrapOutput ?? false,
+    partnerAddress: options.partnerAddress ?? ZERO_ADDRESS,
   };
 }
 

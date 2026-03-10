@@ -301,6 +301,11 @@ export interface LimitOrderParams {
    * before sending to the recipient.
    */
   unwrapOutput: boolean;
+  /**
+   * Partner address to receive 50% of protocol fees.
+   * Use the zero address (`0x0000…`) for no partner.
+   */
+  partnerAddress: string;
 }
 
 /**
@@ -356,6 +361,8 @@ export interface LimitOrderRecord {
   feeOnOutput: boolean;
   /** Unwrap output to native PLS flag */
   unwrapOutput: boolean;
+  /** Partner address for fee sharing */
+  partnerAddress: string;
   /** EIP-712 signature */
   signature: string;
   /** Pair key in format `tokenIn:tokenOut` (lowercased) */
