@@ -51,7 +51,7 @@ export const WPLS = "0xA1077a294dDE1B09bB078844df40758a5D0f9a27";
  *
  * The EIP-712 domain `verifyingContract` MUST match this address.
  */
-export const SWITCH_LIMIT_ORDER = "0x8FDA554D8bD5B3aEe699b2502C7248BF4205bbCd";
+export const SWITCH_LIMIT_ORDER = "0x79925587bE77C25b292C0ecA6FEdD3A3f07916F9";
 
 /**
  * SwitchPLSFlow contract address on PulseChain.
@@ -60,7 +60,7 @@ export const SWITCH_LIMIT_ORDER = "0x8FDA554D8bD5B3aEe699b2502C7248BF4205bbCd";
  * which wraps to WPLS and creates the limit order on their behalf.
  * No EIP-712 signing required — single transaction.
  */
-export const SWITCH_PLS_FLOW = "0xF3c05d40412DBb6326B1C7dCf689445063b6BCE4";
+export const SWITCH_PLS_FLOW = "0x79D1Ce697509D75D79c6cA8f9232ee6ca6Df379a";
 
 // ── Limit Order API endpoints ───────────────────────────────────────────────
 

@@ -91,6 +91,19 @@
   },
   {
     "type": "function",
+    "name": "OPERATOR_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "PARTNER_FEE_SHARE",
     "inputs": [],
     "outputs": [
@@ -134,6 +147,19 @@
     "inputs": [
       {
         "name": "addedMaintainer",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "addOperator",
+    "inputs": [
+      {
+        "name": "_operator",
         "type": "address",
         "internalType": "address"
       }
@@ -484,11 +510,6 @@
         "name": "excessOnInput",
         "type": "bool",
         "internalType": "bool"
-      },
-      {
-        "name": "profitRecipient",
-        "type": "address",
-        "internalType": "address"
       }
     ],
     "outputs": [],
@@ -644,6 +665,19 @@
   },
   {
     "type": "function",
+    "name": "operatorGateEnabled",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "placeOrder",
     "inputs": [
       {
@@ -776,6 +810,19 @@
   },
   {
     "type": "function",
+    "name": "removeOperator",
+    "inputs": [
+      {
+        "name": "_operator",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "renounceRole",
     "inputs": [
       {
@@ -831,6 +878,19 @@
         "name": "_fee",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setOperatorGate",
+    "inputs": [
+      {
+        "name": "_enabled",
+        "type": "bool",
+        "internalType": "bool"
       }
     ],
     "outputs": [],
@@ -915,6 +975,19 @@
         "type": "uint256",
         "indexed": true,
         "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "OperatorGateToggled",
+    "inputs": [
+      {
+        "name": "enabled",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
       }
     ],
     "anonymous": false
@@ -1186,6 +1259,11 @@
   {
     "type": "error",
     "name": "NonceAlreadyUsed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "OperatorOnly",
     "inputs": []
   },
   {
