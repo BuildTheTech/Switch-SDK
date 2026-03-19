@@ -128,7 +128,7 @@ export const ERC20_ABI = [
  * Useful only if you want to decode or manually construct calldata.
  */
 export const GO_SWITCH_ABI = [
-  "function goSwitch(tuple(uint256 amountIn, tuple(address tokenIn, address tokenOut, tuple(address adapter, uint256 amountIn)[] legs)[] hops)[] _routes, address _to, uint256 _minTotalAmountOut, uint256 _fee, bool _feeOnOutput, bool _unwrapOutput, address _partnerAddress) payable",
+  "function goSwitch(tuple(uint256 amountIn, tuple(address tokenIn, address tokenOut, tuple(address adapter, uint256 amountIn, uint24 fee)[] legs)[] hops)[] _routes, address _to, uint256 _minTotalAmountOut, uint256 _fee, bool _feeOnOutput, bool _unwrapOutput, address _partnerAddress) payable",
 ] as const;
 
 /**
