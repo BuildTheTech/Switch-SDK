@@ -33,7 +33,7 @@ export const CHAIN_ID = 369;
 // ── Contract addresses --
 
 /** SwitchRouter contract — target for all swap transactions */
-export const SWITCH_ROUTER = "0x99999d19eC98F936934e029e63D1C0A127a15207";
+export const SWITCH_ROUTER = "0xc6d4f096A7a4B3d534DEa725821346Ee1b4FE5CE";
 
 /**
  * Native PLS sentinel address.
@@ -51,7 +51,7 @@ export const WPLS = "0xA1077a294dDE1B09bB078844df40758a5D0f9a27";
  *
  * The EIP-712 domain `verifyingContract` MUST match this address.
  */
-export const SWITCH_LIMIT_ORDER = "0x79925587bE77C25b292C0ecA6FEdD3A3f07916F9";
+export const SWITCH_LIMIT_ORDER = "0x0e884072a891b406C0D814907A1E2310fE5F5Deb";
 
 /**
  * SwitchPLSFlow contract address on PulseChain.
@@ -60,7 +60,7 @@ export const SWITCH_LIMIT_ORDER = "0x79925587bE77C25b292C0ecA6FEdD3A3f07916F9";
  * which wraps to WPLS and creates the limit order on their behalf.
  * No EIP-712 signing required — single transaction.
  */
-export const SWITCH_PLS_FLOW = "0x79D1Ce697509D75D79c6cA8f9232ee6ca6Df379a";
+export const SWITCH_PLS_FLOW = "0x88c9e2C83b6B7c707602e548481e58E920694E64";
 
 // ── Limit Order API endpoints ───────────────────────────────────────────────
 
@@ -135,12 +135,48 @@ export const GO_SWITCH_ABI = [
  * SwitchRouter custom error signatures for decoding reverts.
  */
 export const SWITCH_ROUTER_ERRORS = [
-  "error FinalAmountOutTooLow()",
-  "error ExcessiveFee()",
   "error InsufficientFee()",
-  "error MsgValueMismatch()",
+  "error ExcessiveFee()",
+  "error FinalAmountOutTooLow()",
+  "error EmptySplit()",
+  "error SplitMixedTokenIn()",
+  "error SplitMixedTokenOut()",
   "error ZeroInput()",
+  "error MsgValueMismatch()",
+  "error PathNeedsBeginWithWPLS()",
+  "error PathNeedsEndWithWPLS()",
+  "error AdapterNotApproved(address)",
+  "error EmptyHop()",
+  "error FeeNotSupported()",
 ] as const;
+
+/**
+ * 4-byte error selectors for SwitchRouter reverts.
+ *
+ * Useful for matching raw revert data from `eth_call` or failed transactions.
+ * Key = selector hex, value = human-readable error name.
+ *
+ * @example
+ * ```ts
+ * const selector = revertData.slice(0, 10); // "0x4a2ab023"
+ * const name = SWITCH_ROUTER_ERROR_SELECTORS[selector]; // "FinalAmountOutTooLow"
+ * ```
+ */
+export const SWITCH_ROUTER_ERROR_SELECTORS: Record<string, string> = {
+  "0x025dbdd4": "InsufficientFee",
+  "0x2977da44": "ExcessiveFee",
+  "0x4a2ab023": "FinalAmountOutTooLow",
+  "0x5725cad2": "EmptySplit",
+  "0xdceb8b7a": "SplitMixedTokenIn",
+  "0x45a68c8c": "SplitMixedTokenOut",
+  "0xaf458c07": "ZeroInput",
+  "0xbc6f88c5": "MsgValueMismatch",
+  "0x906478dc": "PathNeedsBeginWithWPLS",
+  "0x037ccaee": "PathNeedsEndWithWPLS",
+  "0x0c48343e": "AdapterNotApproved",
+  "0xb19ef58a": "EmptyHop",
+  "0x73620122": "FeeNotSupported",
+};
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Limit Order — EIP-712 Constants
@@ -205,16 +241,39 @@ export const LIMIT_ORDER_ABI = [
  * SwitchLimitOrder custom error signatures for decoding reverts.
  */
 export const LIMIT_ORDER_ERRORS = [
-  "error ExcessiveFee()",
-  "error InsufficientOutput()",
-  "error InvalidAmount()",
   "error InvalidSignature()",
-  "error InvalidTokens()",
   "error NonceAlreadyUsed()",
   "error OrderExpired()",
+  "error InsufficientOutput()",
+  "error InvalidAmount()",
+  "error ExcessiveFee()",
   "error RouteInputExceedsMax()",
+  "error InvalidTokens()",
   "error TransferFailed()",
+  "error OperatorOnly()",
 ] as const;
+
+/**
+ * 4-byte error selectors for SwitchLimitOrder reverts.
+ *
+ * @example
+ * ```ts
+ * const selector = revertData.slice(0, 10); // "0x8baa579f"
+ * const name = LIMIT_ORDER_ERROR_SELECTORS[selector]; // "InvalidSignature"
+ * ```
+ */
+export const LIMIT_ORDER_ERROR_SELECTORS: Record<string, string> = {
+  "0x8baa579f": "InvalidSignature",
+  "0x1fb09b80": "NonceAlreadyUsed",
+  "0xc56873ba": "OrderExpired",
+  "0xbb2875c3": "InsufficientOutput",
+  "0x2c5211c6": "InvalidAmount",
+  "0x2977da44": "ExcessiveFee",
+  "0xb6972a87": "RouteInputExceedsMax",
+  "0x672215de": "InvalidTokens",
+  "0x90b8ec18": "TransferFailed",
+  "0xae5e3e00": "OperatorOnly",
+};
 
 /**
  * Minimal ABI for the SwitchPLSFlow contract.
@@ -237,3 +296,11 @@ export const PLS_FLOW_ERRORS = [
   "error ZeroAmountIn()",
   "error InvalidTokenOut()",
 ] as const;
+
+/**
+ * 4-byte error selectors for SwitchPLSFlow reverts.
+ */
+export const PLS_FLOW_ERROR_SELECTORS: Record<string, string> = {
+  "0x990965c1": "ZeroAmountIn",
+  "0x1b6d1fa0": "InvalidTokenOut",
+};

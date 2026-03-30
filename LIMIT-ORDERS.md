@@ -199,7 +199,7 @@ When selling **native PLS** (not WPLS), use the **PLSFlow** contract instead of 
 import { getPLSFlowAddress, PLS_FLOW_ABI } from "@switch-win/sdk";
 
 const SWITCH_PLS_FLOW = getPLSFlowAddress();
-// "0x79D1Ce697509D75D79c6cA8f9232ee6ca6Df379a"
+// "0x88c9e2C83b6B7c707602e548481e58E920694E64"
 ```
 
 ### Creating a Native PLS Limit Order

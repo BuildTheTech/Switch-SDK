@@ -69,6 +69,7 @@ export {
   ERC20_ABI,
   GO_SWITCH_ABI,
   SWITCH_ROUTER_ERRORS,
+  SWITCH_ROUTER_ERROR_SELECTORS,
 } from "./constants.js";
 
 // Constants — Limit Orders
@@ -83,8 +84,10 @@ export {
   LIMIT_ORDER_EIP712_TYPES,
   LIMIT_ORDER_ABI,
   LIMIT_ORDER_ERRORS,
+  LIMIT_ORDER_ERROR_SELECTORS,
   PLS_FLOW_ABI,
   PLS_FLOW_ERRORS,
+  PLS_FLOW_ERROR_SELECTORS,
 } from "./constants.js";
 
 // Limit Order helpers
