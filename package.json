@@ -1,6 +1,6 @@
 {
   "name": "@switch-win/sdk",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Official integration kit for the Switch DEX Aggregator on PulseChain — types, constants, ABIs, limit orders, and examples",
   "author": "BuildTheTech",
   "license": "MIT",

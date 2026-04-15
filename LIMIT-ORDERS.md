@@ -53,6 +53,8 @@ Switch Limit Orders let users place **gasless, signed orders** that are filled a
 - **Custom recipient** — output tokens can be sent to a different address
 - **WPLS unwrap** — if the output token is WPLS, it can be auto-unwrapped to native PLS
 
+> **⚠️ Important:** The `SWITCH_LIMIT_ORDER` address is the **current** default. The contract may be redeployed (e.g. when the router is upgraded). Each order returned by the API includes a `limitOrderContract` field — **always use the contract address from the order for on-chain interactions (approvals, cancellations), not a hardcoded constant.** This ensures your integration works seamlessly across contract versions without code changes.
+
 ---
 
 ## How It Works
@@ -231,6 +233,8 @@ if (isNativePLS(NATIVE_PLS)) {
     deadline,
     feeOnOutput,
     unwrapOutput,
+    ethers.ZeroAddress,      // partnerAddress (0x0 = no partner)
+    ethers.ZeroAddress,      // recipient (0x0 = defaults to msg.sender)
     { value: amountIn }
   );
   
@@ -251,7 +255,7 @@ if (isNativePLS(NATIVE_PLS)) {
 | **Gas cost** | User pays gas | Gasless signing (user pays on fill) |
 | **Order discovery** | On-chain event | Requires successful POST |
 | **Maker address** | PLSFlow contract | User's wallet |
-| **Recipient** | User's wallet | User's wallet (or custom) |
+| **Recipient** | User's wallet (or custom) | User's wallet (or custom) |
 
 ### Important: Order Discovery
 
@@ -384,7 +388,9 @@ const stats = await fetchLimitOrderStats();
 
 Cancellation is a **two-step process** — both steps are important:
 
-1. **On-chain:** Call `invalidateNonce(nonce)` on the SwitchLimitOrder contract. This is the authoritative cancellation — it prevents any operator from executing the order even if the backend hasn't been notified yet.
+1. **On-chain:** Call `invalidateNonce(nonce)` on the **order's** SwitchLimitOrder contract. This is the authoritative cancellation — it prevents any operator from executing the order even if the backend hasn't been notified yet.
+
+   > **⚠️** Each order includes a `limitOrderContract` field. Always use that address — do not hardcode a single contract constant, as the contract may be redeployed across versions.
 
 2. **Backend:** Call `DELETE /limit-orders` (or `cancelLimitOrder()`) to remove the order from the active orderbook. This stops operators from even attempting to fill it.
 
@@ -398,7 +404,8 @@ const maker = await signer.getAddress();
 const nonceToCancel = 1717171717;
 
 // Step 1: Invalidate the nonce on-chain (prevents fill)
-const contract = new ethers.Contract(SWITCH_LIMIT_ORDER, LIMIT_ORDER_ABI, signer);
+// ⚠️ Use order.limitOrderContract — not a hardcoded address
+const contract = new ethers.Contract(order.limitOrderContract, LIMIT_ORDER_ABI, signer);
 const tx = await contract.invalidateNonce(nonceToCancel);
 await tx.wait();
 

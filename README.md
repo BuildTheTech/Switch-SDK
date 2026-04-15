@@ -86,7 +86,8 @@ curl -H "x-api-key: YOUR_KEY" \
 # 2. Approve the SwitchRouter to spend your input token (ERC-20 only, skip for native PLS)
 
 # 3. Send the transaction using the `tx` object from the response:
-#    { to: "0x31077...", data: "0x...", value: "0" }
+#    { to: "0x0305...", data: "0x...", value: "0" }
+#    ⚠️ Always use tx.to — do NOT hardcode the router address
 ```
 
 ### Using the SDK types (TypeScript)
@@ -106,9 +107,11 @@ const quote: BestPathResponse = await res.json();
 const token = new ethers.Contract(fromToken, ["function approve(address,uint256)"], signer);
 await (await token.approve(SWITCH_ROUTER, amount)).wait();
 
-// 3. Send the swap
+// 3. Send the swap — always use quote.tx which includes the correct router address
 await signer.sendTransaction(quote.tx);
 ```
+
+> **⚠️ Always use `tx.to` from the quote response** when sending swap transactions. Do NOT hardcode the router address — the contract may be redeployed.
 
 For a production integration with tax token handling, adapter filtering, and fee mode selection, see [Swap Integration Flow](#swap-integration-flow) and the [full examples](examples/).
 
@@ -296,6 +299,8 @@ console.log("Swap confirmed:", receipt.hash);
 ```
 
 That's it. The `tx.data` already encodes the correct `goSwitch()` call with your routes, slippage protection, fee, and partner address.
+
+> **⚠️ Always use `tx.to` from the response** — do NOT hardcode the router address. The `SWITCH_ROUTER` constant is provided for **token approvals only**. The router contract may be redeployed; `tx.to` always points to the current production router.
 
 The `tx` object does not include a `gas` field. Most wallet libraries (ethers.js, web3.py, MetaMask) auto-estimate gas when `gas` is omitted. For multi-hop split swaps, `500,000`–`1,000,000` gas is typically sufficient:
 

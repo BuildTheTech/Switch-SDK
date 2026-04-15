@@ -32,8 +32,15 @@ export const CHAIN_ID = 369;
 
 // ── Contract addresses --
 
-/** SwitchRouter contract — target for all swap transactions */
-export const SWITCH_ROUTER = "0xc6d4f096A7a4B3d534DEa725821346Ee1b4FE5CE";
+/**
+ * SwitchRouter contract — approval target for swap transactions.
+ *
+ * **Important:** Do NOT hardcode this address as the `to` field when sending
+ * swap transactions. Always use `tx.to` from the quote response — the router
+ * contract may be redeployed. This constant is safe for **approvals only**
+ * (the new router honours legacy allowances).
+ */
+export const SWITCH_ROUTER = "0x0305fcb5dA680EA6fd1B01A96C1949175B99d406";
 
 /**
  * Native PLS sentinel address.
@@ -47,11 +54,11 @@ export const WPLS = "0xA1077a294dDE1B09bB078844df40758a5D0f9a27";
 // ── Limit Order contract ────────────────────────────────────────────────
 
 /**
- * SwitchLimitOrder contract address on PulseChain.
+ * SwitchLimitOrder contract address on PulseChain (V4).
  *
  * The EIP-712 domain `verifyingContract` MUST match this address.
  */
-export const SWITCH_LIMIT_ORDER = "0x0e884072a891b406C0D814907A1E2310fE5F5Deb";
+export const SWITCH_LIMIT_ORDER = "0x8e3881bdF81Fc0211383B2e576076B654F7aFD86";
 
 /**
  * SwitchPLSFlow contract address on PulseChain.
