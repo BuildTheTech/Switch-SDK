@@ -376,11 +376,14 @@ const stats = await fetchLimitOrderStats();
 | `status` | `"ACTIVE" \| "FILLED" \| "CANCELLED" \| "EXPIRED"` | `"ACTIVE"` | Filter by order status |
 | `maker` | `string` | — | Filter by maker address |
 | `owner` | `string` | — | Filter by owner (matches maker OR recipient) |
+| `partnerAddress` | `string` | — | Filter by partner address stored on the order |
 | `tokenIn` | `string` | — | Filter by input token |
 | `tokenOut` | `string` | — | Filter by output token |
 | `pair` | `string` | — | Filter by pair key (`tokenIn:tokenOut`, lowercased) |
 | `limit` | `number` | `100` | Page size (1–500) |
 | `offset` | `number` | `0` | Page offset |
+
+> Each order record returned by the API includes the original `partnerAddress` used when the order was created, plus the `limitOrderContract` that should be used for on-chain cancellation/fill interactions.
 
 ---
 
@@ -498,6 +501,8 @@ Submit a signed limit order. The backend verifies the EIP-712 signature before s
     "feeOnOutput": false,
     "recipient": "0x...",
     "unwrapOutput": false,
+    "partnerAddress": "0x0000000000000000000000000000000000000000",
+    "limitOrderContract": "0x...",
     "signature": "0x...",
     "pairKey": "0x...:0x...",
     "status": "ACTIVE",
@@ -544,9 +549,35 @@ List orders with optional query filters. See [Query Filters](#query-filters) abo
   "total": 42,
   "limit": 100,
   "offset": 0,
-  "orders": [{ ... }, { ... }]
+  "orders": [
+    {
+      "id": "clx...",
+      "maker": "0x...",
+      "recipient": "0x...",
+      "tokenIn": "0x...",
+      "tokenOut": "0x...",
+      "amountIn": "1000000000000000000",
+      "minAmountOut": "500000000000000000000",
+      "deadline": 1717257600,
+      "nonce": 1717171717,
+      "feeOnOutput": false,
+      "unwrapOutput": false,
+      "partnerAddress": "0xYourPartnerAddress",
+      "limitOrderContract": "0x...",
+      "signature": "0x...",
+      "pairKey": "0x...:0x...",
+      "status": "ACTIVE",
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z",
+      "filledTxHash": null,
+      "filler": null,
+      "fillerProfit": null
+    }
+  ]
 }
 ```
+
+The backend currently returns the full order record, so integrations should expect at least the fields above and tolerate additional metadata fields in future deployments.
 
 ### `GET /limit-orders/pairs`
 
@@ -579,7 +610,7 @@ Summary statistics.
 | `CreateLimitOrderRequest` | Alias for `SignedLimitOrder` (POST body) |
 | `CancelLimitOrderRequest` | `{ maker, nonce }` (DELETE body) |
 | `LimitOrderStatus` | `"ACTIVE" \| "FILLED" \| "CANCELLED" \| "EXPIRED"` |
-| `LimitOrderRecord` | Full order record from the API (includes `id`, `status`, timestamps) |
+| `LimitOrderRecord` | Full order record from the API (includes `partnerAddress`, `limitOrderContract`, status, and timestamps) |
 | `CreateLimitOrderResponse` | `{ success: true, order: LimitOrderRecord }` |
 | `CancelLimitOrderResponse` | `{ success: true }` |
 | `ListLimitOrdersResponse` | `{ total, limit, offset, orders: LimitOrderRecord[] }` |

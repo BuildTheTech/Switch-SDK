@@ -361,6 +361,8 @@ export interface ListLimitOrdersOptions {
    * where the maker is the PLSFlow contract but the user is the recipient.
    */
   owner?: string;
+  /** Filter by partner address */
+  partnerAddress?: string;
   /** Filter by input token address */
   tokenIn?: string;
   /** Filter by output token address */
@@ -393,6 +395,12 @@ export interface ListLimitOrdersOptions {
  *   tokenOut: "0xPLSXAddress",
  *   status: "FILLED",
  * });
+ *
+ * // Orders attributed to a specific partner
+ * const partnerOrders = await fetchLimitOrders({
+ *   partnerAddress: "0xPartnerAddress",
+ *   status: "ACTIVE",
+ * });
  * ```
  */
 export async function fetchLimitOrders(
@@ -402,6 +410,7 @@ export async function fetchLimitOrders(
   if (options.status)   params.set("status", options.status);
   if (options.maker)    params.set("maker", options.maker);
   if (options.owner)    params.set("owner", options.owner);
+  if (options.partnerAddress) params.set("partnerAddress", options.partnerAddress);
   if (options.tokenIn)  params.set("tokenIn", options.tokenIn);
   if (options.tokenOut) params.set("tokenOut", options.tokenOut);
   if (options.pair)     params.set("pair", options.pair);

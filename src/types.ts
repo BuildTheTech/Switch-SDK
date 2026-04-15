@@ -363,16 +363,30 @@ export interface LimitOrderRecord {
   unwrapOutput: boolean;
   /** Partner address for fee sharing */
   partnerAddress: string;
+  /** LO contract address this order targets for cancellation/fill */
+  limitOrderContract?: string;
   /** EIP-712 signature */
   signature: string;
   /** Pair key in format `tokenIn:tokenOut` (lowercased) */
   pairKey: string;
+  /** Sell tax on input token in basis points, when known */
+  tokenInSellTaxBps?: number;
+  /** Buy tax on input token in basis points, when known */
+  tokenInBuyTaxBps?: number;
+  /** Sell tax on output token in basis points, when known */
+  tokenOutSellTaxBps?: number;
+  /** Buy tax on output token in basis points, when known */
+  tokenOutBuyTaxBps?: number;
   /** Current order status */
   status: LimitOrderStatus;
   /** ISO 8601 creation timestamp */
   createdAt: string;
   /** ISO 8601 last update timestamp */
   updatedAt: string;
+  /** Filler address for filled orders */
+  filler?: string | null;
+  /** Filler profit in tokenIn units for filled orders */
+  fillerProfit?: string | null;
   /** Block number where the order was filled (if status is FILLED) */
   filledBlock?: number | null;
   /** Transaction hash of the fill (if status is FILLED) */
