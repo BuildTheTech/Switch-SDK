@@ -54,11 +54,27 @@ export const WPLS = "0xA1077a294dDE1B09bB078844df40758a5D0f9a27";
 // ── Limit Order contract ────────────────────────────────────────────────
 
 /**
- * SwitchLimitOrder contract address on PulseChain (V4).
+ * SwitchLimitOrder contract address on PulseChain.
  *
+ * This is the current production limit order contract.
+ * For integrators, treat this as user-facing V2.
  * The EIP-712 domain `verifyingContract` MUST match this address.
  */
 export const SWITCH_LIMIT_ORDER = "0x8e3881bdF81Fc0211383B2e576076B654F7aFD86";
+
+/**
+ * Previous production SwitchLimitOrder contract on PulseChain.
+ *
+ * For integrators, treat this as user-facing V1.
+ */
+export const SWITCH_LIMIT_ORDER_V1 = "0x0e884072a891b406c0d814907a1e2310fe5f5deb";
+
+/**
+ * Current production SwitchLimitOrder contract alias.
+ *
+ * Use this if you want explicit user-facing version naming in integrations.
+ */
+export const SWITCH_LIMIT_ORDER_V2 = SWITCH_LIMIT_ORDER;
 
 /**
  * SwitchPLSFlow contract address on PulseChain.

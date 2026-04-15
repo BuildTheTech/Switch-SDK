@@ -181,7 +181,18 @@ export function buildLimitOrder(options: BuildLimitOrderOptions): LimitOrderPara
  * const signature = await signer._signTypedData(domain, types, order);
  * ```
  */
-export function getEIP712SigningParams() {
+export function getEIP712SigningParams(limitOrderContract?: string) {
+  if (limitOrderContract) {
+    return {
+      domain: {
+        name: "SwitchLimitOrder" as const,
+        version: "2" as const,
+        chainId: 369 as const,
+        verifyingContract: limitOrderContract,
+      },
+      types: LIMIT_ORDER_EIP712_TYPES,
+    } as const;
+  }
   return {
     domain: LIMIT_ORDER_EIP712_DOMAIN,
     types: LIMIT_ORDER_EIP712_TYPES,
@@ -199,8 +210,8 @@ export function getEIP712SigningParams() {
  *
  * @returns The SwitchLimitOrder contract address
  */
-export function getApprovalTarget(): string {
-  return SWITCH_LIMIT_ORDER;
+export function getApprovalTarget(limitOrderContract?: string): string {
+  return limitOrderContract || SWITCH_LIMIT_ORDER;
 }
 
 /**
