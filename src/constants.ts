@@ -82,8 +82,25 @@ export const SWITCH_LIMIT_ORDER_V2 = SWITCH_LIMIT_ORDER;
  * Used for native PLS limit orders. Users send PLS to this contract,
  * which wraps to WPLS and creates the limit order on their behalf.
  * No EIP-712 signing required — single transaction.
+ *
+ * This is the current production PLSFlow contract.
+ * For integrators, treat this as user-facing V2.
  */
-export const SWITCH_PLS_FLOW = "0x88c9e2C83b6B7c707602e548481e58E920694E64";
+export const SWITCH_PLS_FLOW = "0xCf5606bdC750d8626Cec32CA2E1BB207968db1D5";
+
+/**
+ * Previous production SwitchPLSFlow contract on PulseChain.
+ *
+ * For integrators, treat this as user-facing V1.
+ */
+export const SWITCH_PLS_FLOW_V1 = "0x88c9e2C83b6B7c707602e548481e58E920694E64";
+
+/**
+ * Current production SwitchPLSFlow contract alias.
+ *
+ * Use this if you want explicit user-facing version naming in integrations.
+ */
+export const SWITCH_PLS_FLOW_V2 = SWITCH_PLS_FLOW;
 
 // ── Limit Order API endpoints ───────────────────────────────────────────────
 

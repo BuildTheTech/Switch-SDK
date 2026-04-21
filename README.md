@@ -623,13 +623,13 @@ GET /swap/quote?network=pulsechain&from=0xA1077a294dDE1B09bB078844df40758a5D0f9a
   // Transaction object — only present when `sender` is provided
   // ⚠️ Always use tx.to from this response — do NOT hardcode the router address
   "tx": {
-    "to": "0xc6d4f096A7a4B3d534DEa725821346Ee1b4FE5CE",
+    "to": "0x0305fcb5dA680EA6fd1B01A96C1949175B99d406",
     "data": "0x...",     // ABI-encoded goSwitch() calldata with feeOnOutput = false
     "value": "0"          // "0" for ERC-20 input; amountIn for native PLS input
   },
   // Same swap but with fee taken from the output token instead
   "txFeeOnOutput": {
-    "to": "0xc6d4f096A7a4B3d534DEa725821346Ee1b4FE5CE",
+    "to": "0x0305fcb5dA680EA6fd1B01A96C1949175B99d406",
     "data": "0x...",     // ABI-encoded goSwitch() calldata with feeOnOutput = true
     "value": "0"
   }
@@ -897,9 +897,11 @@ All constants are importable from [`src/constants.ts`](src/constants.ts).
 | Name | Value |
 |---|---|
 | **Chain** | PulseChain (Chain ID `369`) |
-| **SwitchRouter** | `0xc6d4f096A7a4B3d534DEa725821346Ee1b4FE5CE` |
-| **SwitchLimitOrder** | `0x0e884072a891b406C0D814907A1E2310fE5F5Deb` |
-| **SwitchPLSFlow** | `0x88c9e2C83b6B7c707602e548481e58E920694E64` |
+| **SwitchRouter** | `0x0305fcb5dA680EA6fd1B01A96C1949175B99d406` |
+| **SwitchLimitOrder** (V2 — current) | `0x8e3881bdF81Fc0211383B2e576076B654F7aFD86` |
+| **SwitchLimitOrder** (V1 — legacy) | `0x0e884072a891b406C0D814907A1E2310fE5F5Deb` |
+| **SwitchPLSFlow** (V2 — current) | `0xCf5606bdC750d8626Cec32CA2E1BB207968db1D5` |
+| **SwitchPLSFlow** (V1 — legacy) | `0x88c9e2C83b6B7c707602e548481e58E920694E64` |
 | **Native PLS sentinel** | `0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE` |
 | **WPLS** | `0xA1077a294dDE1B09bB078844df40758a5D0f9a27` |
 | **Fee denominator** | `10000` (basis points) |
