@@ -527,7 +527,7 @@ into the UI separately from this list.
 | VIRTUAL | Virtuals Protocol | `0xc6911796042b15d7Fa4F6CDe69e245DdCd3d9c31` | 18 |
 | CASHCAT | Cash Cat | `0x020bfC650A365f8BB26819deAAbF3E21291018b4` | 18 |
 | WALLET | Robinhood Wallet | `0x0339f5459FC690aC85F1782e15782A151b4A9E1b` | 18 |
-| seedcoin | watch it grow | `0xD8d1C08A8bA4fc64BAC744f74290B89ADcb6Bf25` | 9 |
+| seedcoin | watch it grow | `0xD8d1C08A8bA4fc64BAC744f74290B89ADcb6Bf25` | 18 |
 | JUGGERNAUT | The Juggernaut | `0xD7321801CAae694090694Ff55A9323139F043B88` | 18 |
 | HOODRAT | Hoodrat | `0x8e62F281f282686fCa6dCB39288069a93fC23F1c` | 18 |
 | DIH | Dog In Hood | `0x17bb0C898254406b1Ea2e8E99B0C263e26c9E4a4` | 18 |

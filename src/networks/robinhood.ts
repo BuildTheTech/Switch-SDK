@@ -96,7 +96,7 @@ export const ROBINHOOD_TOKENS = {
     address: "0xD8d1C08A8bA4fc64BAC744f74290B89ADcb6Bf25",
     symbol: "seedcoin",
     name: "watch it grow",
-    decimals: 9,
+    decimals: 18,
   },
   JUGGERNAUT: {
     address: "0xD7321801CAae694090694Ff55A9323139F043B88",
