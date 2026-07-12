@@ -103,7 +103,6 @@ await window.ethereum.request({
 | Contract | Address |
 |---|---|
 | SwitchRouter | `0x8730C3e2cF2c8CDa8E6166837A1Ed26f46aa9E59` |
-| SwitchRouterView | `0xFF6b56d3F444eB5b7FA1db047F57140C84810376` |
 | Uniswap V2 adapter | `0x7a14d7A8509a66209D4332843b983b29bF5604A4` |
 | Uniswap V3 adapter | `0xbcA08f296d9Ba0dc19Aa0E05D355365cE29A3205` |
 
