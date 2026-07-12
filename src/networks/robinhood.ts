@@ -27,8 +27,7 @@ export const ROBINHOOD_SWITCH_CONTRACTS = {
   routerView: "0xFF6b56d3F444eB5b7FA1db047F57140C84810376",
   uniswapV2Adapter: "0x7a14d7A8509a66209D4332843b983b29bF5604A4",
   uniswapV3Adapter: "0xbcA08f296d9Ba0dc19Aa0E05D355365cE29A3205",
-  // The V4 adapter is intentionally omitted until it is deployed and
-  // activated in the production router's adapter list.
+  uniswapV4Adapter: "0x754dDCD05aFbAd1cc7Bc42B9268EB586F579E7F6",
 } as const;
 
 /** Uniswap contracts used by the Robinhood Switch deployment. */

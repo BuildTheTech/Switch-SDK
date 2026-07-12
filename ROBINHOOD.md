@@ -11,7 +11,7 @@ Production integration reference for Switch swaps on Robinhood Chain mainnet.
 | Explorer | `https://robinhoodchain.blockscout.com` |
 | Quote API | `https://quote.switch.win/swap/quote` |
 | Tax API | `https://quote.switch.win/swap/checkTax` |
-| Supported liquidity | Uniswap V2 and V3 live; hookless static-fee Uniswap V4 pending adapter deployment and activation |
+| Supported liquidity | Uniswap V2, V3, and hookless static-fee V4 |
 | Limit orders | Not currently available |
 
 ## Contents
@@ -107,6 +107,12 @@ await window.ethereum.request({
 | SwitchRouter | `0x8730C3e2cF2c8CDa8E6166837A1Ed26f46aa9E59` |
 | Uniswap V2 adapter | `0x7a14d7A8509a66209D4332843b983b29bF5604A4` |
 | Uniswap V3 adapter | `0xbcA08f296d9Ba0dc19Aa0E05D355365cE29A3205` |
+| Uniswap V4 adapter | `0x754dDCD05aFbAd1cc7Bc42B9268EB586F579E7F6` |
+
+The V4 adapter was created in
+[deployment transaction `0x60d5...34a7`](https://robinhoodchain.blockscout.com/tx/0x60d56466a8162a643a15ecde98322ec05ea23d44d03fbd817df4ddbaef4834a7)
+and added to the router in
+[activation transaction `0x405b...1098`](https://robinhoodchain.blockscout.com/tx/0x405b49619ebfe4d1a73eb2d4601d8d1e63ae3d6fff0cd811a96c17e146971098).
 
 The router constant is the ERC-20 approval target. Always submit the swap to
 `quote.tx.to`; do not replace the API-provided transaction target with a
@@ -163,11 +169,12 @@ selected pool consumes native ETH and wraps native ETH when that pool produces
 it. API callers should continue using `ROBINHOOD_NATIVE_ETH` for a native user
 input/output and `ROBINHOOD_TOKENS.WETH.address` for the ERC-20.
 
-Adapter index `2` is reserved for the Robinhood Uniswap V4 adapter. It is not
-live until the adapter has been deployed, whitelisted in the existing
-SwitchRouter, configured in the backend, and advertised by
-`GET /swap/adapters?network=robinhood`. No V4 adapter address is exported yet;
-do not hard-code or force index `2` before the endpoint advertises it.
+The Robinhood Uniswap V4 adapter is deployed at
+`0x754dDCD05aFbAd1cc7Bc42B9268EB586F579E7F6`, whitelisted in the production
+SwitchRouter at adapter index `2`, and exported as
+`ROBINHOOD_SWITCH_CONTRACTS.uniswapV4Adapter`. Continue treating
+`GET /swap/adapters?network=robinhood` as the source of truth for the adapters
+currently available from the quote backend.
 
 The canonical Robinhood V4 infrastructure is available through
 `ROBINHOOD_UNISWAP_CONTRACTS`:
@@ -404,10 +411,10 @@ Robinhood currently returns:
 |---:|---|
 | `0` | Uniswap V2 |
 | `1` | Uniswap V3 |
+| `2` | Uniswap V4 |
 
-After production activation, the same endpoint will also advertise Uniswap V4
-at index `2`. Treat the endpoint response, not this document, as the source of
-truth for whether V4 is currently selectable.
+Treat the endpoint response, not this document, as the source of truth for
+which adapters are currently selectable.
 
 Do not permanently hard-code the available adapter list in an integration.
 Fetch it when presenting routing-source controls. If a quote involves a tax
@@ -452,7 +459,7 @@ GET https://quote.switch.win/swap/quote
 | `fee` | No | Partner/protocol fee in basis points. |
 | `partnerAddress` | No | Fee-sharing recipient. |
 | `feeOnOutput` | No | `true` takes the fee from output; `false` takes it from input. |
-| `adapters` | No | Comma-separated indices returned by `/swap/adapters`, such as `0,1`. Do not request pending index `2` until it is advertised. |
+| `adapters` | No | Comma-separated indices returned by `/swap/adapters`, such as `0,1,2`. |
 | `gasPrice` | No | Quote gas price in wei. |
 
 Omitting `sender` produces a display-only quote. Request a fresh executable
@@ -581,9 +588,9 @@ untrusted clients.
 
 - Robinhood limit orders are not deployed.
 - Rialto DEX is not integrated.
-- Production quotes currently use Uniswap V2 and V3 liquidity. Hookless V4
-  routing is pending adapter deployment, router whitelisting, and backend
-  activation.
+- The production router supports Uniswap V2, V3, and supported hookless
+  static-fee V4 liquidity. V4 participates in quotes whenever adapter index
+  `2` is advertised by `/swap/adapters`.
 - The first V4 phase intentionally excludes hooked and dynamic-fee pools.
 - A V4 allocation currently selects its best single PoolKey; intra-V4
   multi-pool splitting is not yet enabled. V4 can still split against V2/V3.
