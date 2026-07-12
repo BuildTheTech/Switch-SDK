@@ -3,11 +3,11 @@
 [![npm version](https://img.shields.io/npm/v/@switch-win/sdk.svg)](https://www.npmjs.com/package/@switch-win/sdk)
 [![npm downloads](https://img.shields.io/npm/dm/@switch-win/sdk.svg)](https://www.npmjs.com/package/@switch-win/sdk)
 
-> **Official integration kit for the Switch DEX Aggregator on PulseChain**
+> **Official integration kit for the Switch DEX Aggregator on PulseChain and Robinhood Chain**
 
 Everything partners need to integrate Switch swaps and limit orders — API docs, TypeScript types, ABIs, constants, and ready-to-use examples.
 
-**Swap API:** `https://quote.switch.win` &nbsp;|&nbsp; **Limit Order API:** `https://quote.switch.win` &nbsp;|&nbsp; **Chain:** PulseChain (369)
+**Swap API:** `https://quote.switch.win` &nbsp;|&nbsp; **Swap chains:** PulseChain (369), Robinhood Chain (4663) &nbsp;|&nbsp; **Limit orders:** PulseChain
 
 ---
 
@@ -20,7 +20,9 @@ Switch-SDK/
 ├── src/
 │   ├── index.ts                       # Main entry — re-exports everything
 │   ├── types.ts                       # TypeScript types (swap + limit orders)
-│   ├── constants.ts                   # Addresses, ABIs, EIP-712, PLSFlow config
+│   ├── constants.ts                   # PulseChain addresses, ABIs, EIP-712, PLSFlow config
+│   ├── networks/
+│   │   └── robinhood.ts               # Robinhood metadata, contracts, tokens, quote URL helper
 │   └── limit-orders.ts               # Limit order helpers (build, sign, submit, query, PLSFlow)
 ├── abi/
 │   ├── SwitchRouterABI.json           # Full SwitchRouter contract ABI
@@ -43,22 +45,23 @@ Switch-SDK/
 ### Swaps
 
 1. [Quickstart](#quickstart)
-2. [Authentication](#authentication)
-3. [Swap Integration Flow](#swap-integration-flow)
-4. [Swap API Reference](#swap-api-reference)
-5. [Error Handling](#error-handling)
-6. [Partner Fee Sharing](#partner-fee-sharing)
+2. [Robinhood Chain](#robinhood-chain)
+3. [Authentication](#authentication)
+4. [Swap Integration Flow](#swap-integration-flow)
+5. [Swap API Reference](#swap-api-reference)
+6. [Error Handling](#error-handling)
+7. [Partner Fee Sharing](#partner-fee-sharing)
 
 ### Limit Orders
 
-7. [Limit Orders](#limit-orders) — full guide in [`LIMIT-ORDERS.md`](LIMIT-ORDERS.md)
+8. [Limit Orders](#limit-orders) — full guide in [`LIMIT-ORDERS.md`](LIMIT-ORDERS.md)
 
 ### General
 
-8. [Constants & Addresses](#constants--addresses)
-9. [Full Integration Examples](#full-integration-examples)
-10. [Rate Limits](#rate-limits)
-11. [Support](#support)
+9. [Constants & Addresses](#constants--addresses)
+10. [Full Integration Examples](#full-integration-examples)
+11. [Rate Limits](#rate-limits)
+12. [Support](#support)
 
 ---
 
@@ -83,7 +86,7 @@ Get a swap quote and execute it in **three steps**:
 curl -H "x-api-key: YOUR_KEY" \
   "https://quote.switch.win/swap/quote?network=pulsechain&from=0xA1077a294dDE1B09bB078844df40758a5D0f9a27&to=0x95B303987A60C71504D99Aa1b13B4DA07b0790ab&amount=1000000000000000000&sender=0xYOUR_WALLET&slippage=100"
 
-# 2. Approve the SwitchRouter to spend your input token (ERC-20 only, skip for native PLS)
+# 2. Approve the SwitchRouter to spend your input token (ERC-20 only; skip for native currency)
 
 # 3. Send the transaction using the `tx` object from the response:
 #    { to: "0x0305...", data: "0x...", value: "0" }
@@ -103,7 +106,7 @@ const res = await fetch(
 );
 const quote: BestPathResponse = await res.json();
 
-// 2. Approve SwitchRouter (ERC-20 only — skip for native PLS)
+// 2. Approve SwitchRouter (ERC-20 only — skip for native currency)
 const token = new ethers.Contract(fromToken, ["function approve(address,uint256)"], signer);
 await (await token.approve(SWITCH_ROUTER, amount)).wait();
 
@@ -114,6 +117,39 @@ await signer.sendTransaction(quote.tx);
 > **⚠️ Always use `tx.to` from the quote response** when sending swap transactions. Do NOT hardcode the router address — the contract may be redeployed.
 
 For a production integration with tax token handling, adapter filtering, and fee mode selection, see [Swap Integration Flow](#swap-integration-flow) and the [full examples](examples/).
+
+### Robinhood Chain
+
+Robinhood uses the same quote endpoint; set `network=robinhood`. The dedicated
+module includes canonical chain metadata, deployed Switch contracts, vetted
+routing hubs, and a URL builder that always includes the correct network.
+
+For network configuration, deployed addresses, tax handling, execution, and
+the complete frontend token list, see [`ROBINHOOD.md`](ROBINHOOD.md).
+
+```ts
+import {
+  ROBINHOOD_NATIVE_ETH,
+  ROBINHOOD_TOKENS,
+  buildRobinhoodQuoteUrl,
+} from "@switch-win/sdk/networks/robinhood";
+
+const url = buildRobinhoodQuoteUrl({
+  from: ROBINHOOD_NATIVE_ETH,
+  to: ROBINHOOD_TOKENS.USDG.address,
+  amount: 1_000_000_000_000_000n,
+  sender: walletAddress,
+  slippage: 50,
+});
+
+const response = await fetch(url, {
+  headers: { "x-api-key": process.env.SWITCH_API_KEY! },
+});
+```
+
+Always approve `ROBINHOOD_SWITCH_CONTRACTS.router` for ERC-20 input, but submit
+the transaction to `quote.tx.to` so integrations remain safe across router
+upgrades. Limit-order helpers in this package remain PulseChain-only.
 
 ---
 
@@ -214,8 +250,7 @@ function determineFeeOnOutput(
   const isSellTax = fromTax.isTaxToken && fromTax.sellTaxBps > 0;
   const isBuyTax = toTax.isTaxToken && toTax.buyTaxBps > 0;
 
-  // Both tokens are tax tokens — ALWAYS fee on input.
-  // See "Why fee-on-input for tax tokens?" below for a detailed explanation.
+  // Both tokens are taxed — use fee on input to avoid extra output transfers.
   if (isSellTax && isBuyTax) return false;
 
   // Only output token is tax — fee on input (avoids router holding output tokens)
@@ -263,7 +298,7 @@ Once you have a quote, execute it in two steps:
 
 #### Step 1 — Approve Token Spend (ERC-20 inputs only)
 
-If the input token is an **ERC-20** (not native PLS), the user must approve the SwitchRouter contract to spend `amount` tokens before submitting the swap.
+If the input token is an **ERC-20** rather than the chain's native currency, the user must approve the network's SwitchRouter contract to spend `amount` tokens before submitting the swap.
 
 Before sending an approval transaction, check whether the user already has sufficient allowance to avoid wasting gas on a redundant approve:
 
@@ -291,7 +326,7 @@ const { tx } = quoteResponse;
 const txResponse = await signer.sendTransaction({
   to:    tx.to,
   data:  tx.data,
-  value: tx.value,   // "0" for ERC-20 inputs, amountIn for native PLS
+  value: tx.value,   // "0" for ERC-20 inputs, amountIn for native currency
 });
 
 const receipt = await txResponse.wait();
@@ -351,7 +386,7 @@ Returns all available DEX adapters with their on-chain indices and contract addr
 
 | Param | Required | Type | Description |
 |---|---|---|---|
-| `network` | **Yes** | string | Target blockchain network. Currently only `"pulsechain"` is supported. |
+| `network` | **Yes** | string | Target blockchain network: `"pulsechain"` or `"robinhood"`. |
 
 #### Authentication
 
@@ -420,7 +455,7 @@ Detects whether a token has a fee-on-transfer mechanism (tax token) and returns 
 | Parameter | Required | Type | Description |
 |---|---|---|---|
 | `token` | **Yes** | address | Token address to check (0x + 40 hex chars) |
-| `network` | No | string | Target blockchain. Currently only `"pulsechain"`. |
+| `network` | No | string | Target blockchain: `"pulsechain"` or `"robinhood"`. |
 
 #### Latency
 
@@ -534,9 +569,9 @@ Returns the optimal split-route for a swap and (optionally) a ready-to-send tran
 
 | Parameter | Required | Type | Default | Description |
 |---|---|---|---|---|
-| `network` | **Yes** | string | — | Target blockchain network. Currently only `"pulsechain"` is supported. |
-| `from` | **Yes** | address | — | Input token address. Use `0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE` for native PLS. |
-| `to` | **Yes** | address | — | Output token address. Use `0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE` for native PLS. |
+| `network` | **Yes** | string | — | Target blockchain network: `"pulsechain"` or `"robinhood"`. |
+| `from` | **Yes** | address | — | Input token address. Use `0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE` for the network's native currency (PLS or ETH). |
+| `to` | **Yes** | address | — | Output token address. Use `0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE` for the network's native currency (PLS or ETH). |
 | `amount` | **Yes** | string | — | Input amount in **wei** (raw integer string, no decimals). Max: 10²⁷. |
 | `sender` | No* | address | — | Sender wallet address. **Required to receive `tx` calldata in the response.** |
 | `receiver` | No | address | `sender` | Custom recipient address. If omitted, output tokens are sent to `sender`. |
@@ -625,7 +660,7 @@ GET /swap/quote?network=pulsechain&from=0xA1077a294dDE1B09bB078844df40758a5D0f9a
   "tx": {
     "to": "0x0305fcb5dA680EA6fd1B01A96C1949175B99d406",
     "data": "0x...",     // ABI-encoded goSwitch() calldata with feeOnOutput = false
-    "value": "0"          // "0" for ERC-20 input; amountIn for native PLS input
+    "value": "0"          // "0" for ERC-20 input; amountIn for native-currency input
   },
   // Same swap but with fee taken from the output token instead
   "txFeeOnOutput": {
@@ -763,7 +798,7 @@ Errors are returned as JSON with an `error` field:
 | Error | Cause |
 |---|---|
 | `"Missing required parameter: network"` | `network` query param absent |
-| `"This network is not supported at this time."` | `network` is not `"pulsechain"` |
+| `"This network is not supported at this time."` | `network` is not a supported value (`"pulsechain"` or `"robinhood"`) |
 | `"Missing required parameters: from, to, amount"` | One or more required query params absent |
 | `"Invalid from address (must be 0x + 40 hex chars)"` | `from` is not a valid hex address |
 | `"Invalid to address (must be 0x + 40 hex chars)"` | `to` is not a valid hex address |
@@ -793,7 +828,7 @@ If the swap transaction reverts on-chain, the SwitchRouter contract returns one 
 | `FinalAmountOutTooLow()` | Output after fees fell below `_minTotalAmountOut` — price moved beyond your slippage tolerance. Retry with a fresh quote or increase slippage. |
 | `ExcessiveFee()` | `_fee` exceeds the contract maximum (100 bps / 1 %). |
 | `InsufficientFee()` | `_fee` is below the protocol's `MIN_FEE`. Contact the Switch team if you need a lower fee. |
-| `MsgValueMismatch()` | For native PLS swaps, `msg.value` must exactly equal the route's total `amountIn`. |
+| `MsgValueMismatch()` | For native-currency swaps, `msg.value` must exactly equal the route's total `amountIn`. |
 | `ZeroInput()` | No input amount was provided. |
 
 ---
@@ -849,6 +884,7 @@ function shouldFeeOnOutput(from: string, to: string, quote?: BestPathResponse): 
   if (quote) {
     const fromIsTax = quote.fromTokenTax?.isTaxToken ?? false;
     const toIsTax   = quote.toTokenTax?.isTaxToken ?? false;
+    if (fromIsTax && toIsTax) return false;
     if (fromIsTax && !toIsTax) return true;   // collect non-tax output
     if (toIsTax && !fromIsTax) return false;  // collect non-tax input
   }
@@ -890,13 +926,16 @@ Covers: creating orders, approvals, `feeOnOutput` decision guide (tax tokens & o
 
 ## Constants & Addresses
 
-All constants are importable from [`src/constants.ts`](src/constants.ts).
+PulseChain constants are importable from [`src/constants.ts`](src/constants.ts).
+Robinhood constants are available from
+[`src/networks/robinhood.ts`](src/networks/robinhood.ts); see the complete
+[`ROBINHOOD.md`](ROBINHOOD.md) integration reference.
 
 > **⚠️ Do not hardcode the SwitchRouter address.** The router contract may be redeployed from time to time. Always use the `tx.to` (or `txFeeOnOutput.to`) address returned by the `/bestPath` API response when building your transaction. This ensures your integration automatically picks up router upgrades without code changes.
 
 | Name | Value |
 |---|---|
-| **Chain** | PulseChain (Chain ID `369`) |
+| **Chain** | PulseChain (Chain ID `369`); Robinhood Chain uses ID `4663` and network-specific exports |
 | **SwitchRouter** | `0x0305fcb5dA680EA6fd1B01A96C1949175B99d406` |
 | **SwitchLimitOrder** (V2 — current) | `0x8e3881bdF81Fc0211383B2e576076B654F7aFD86` |
 | **SwitchLimitOrder** (V1 — legacy) | `0x0e884072a891b406C0D814907A1E2310fE5F5Deb` |

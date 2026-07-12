@@ -72,6 +72,9 @@ function determineFeeOnOutput(
   const fromAddr = fromToken.toLowerCase();
   const toAddr = toToken.toLowerCase();
 
+  // Both tax tokens → fee on input to avoid extra output-token transfers.
+  if (fromTax.isTaxToken && toTax.isTaxToken) return false;
+
   // If selling a tax token → fee on output (avoids fee being reduced by sell tax)
   if (fromTax.isTaxToken && fromTax.sellTaxBps > 0) return true;
 

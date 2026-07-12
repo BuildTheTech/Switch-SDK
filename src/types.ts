@@ -116,7 +116,7 @@ export interface SwapTransaction {
   to: string;
   /** ABI-encoded `goSwitch()` calldata */
   data: string;
-  /** Native PLS to send (wei). `"0"` for ERC-20 input tokens. */
+  /** Native currency to send (wei). `"0"` for ERC-20 input tokens. */
   value: string;
 }
 

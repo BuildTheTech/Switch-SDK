@@ -1,0 +1,530 @@
+# Switch SDK — Robinhood Chain
+
+Production integration reference for Switch swaps on Robinhood Chain mainnet.
+
+| Setting | Value |
+|---|---|
+| API network | `robinhood` |
+| Chain ID | `4663` |
+| Native currency | ETH (18 decimals) |
+| Public RPC | `https://rpc.mainnet.chain.robinhood.com` |
+| Explorer | `https://robinhoodchain.blockscout.com` |
+| Quote API | `https://quote.switch.win/swap/quote` |
+| Tax API | `https://quote.switch.win/swap/checkTax` |
+| Supported liquidity | Uniswap V2 and Uniswap V3 |
+| Limit orders | Not currently available |
+
+## Contents
+
+- [Installation](#installation)
+- [Authentication](#authentication)
+- [Network configuration](#network-configuration)
+- [Contracts and native currency](#contracts-and-native-currency)
+- [Swap integration flow](#swap-integration-flow)
+- [Quickstart](#quickstart)
+- [Tax-token checks](#tax-token-checks)
+- [Selecting `feeOnOutput`](#selecting-feeonoutput)
+- [Approving and executing](#approving-and-executing)
+- [Swap API reference](#swap-api-reference)
+- [Error handling](#error-handling)
+- [Partner fee sharing](#partner-fee-sharing)
+- [Tokens and routing](#tokens-and-routing)
+- [Rate limits](#rate-limits)
+- [Current limitations](#current-limitations)
+
+## Installation
+
+```bash
+npm install @switch-win/sdk
+```
+
+```ts
+import {
+  ROBINHOOD_CHAIN,
+  ROBINHOOD_NATIVE_ETH,
+  ROBINHOOD_SWITCH_CONTRACTS,
+  ROBINHOOD_TOKENS,
+  ROBINHOOD_FEE_TOKEN_PRIORITY,
+  ROBINHOOD_FRONTEND_DEFAULT_TOKENS,
+  ROBINHOOD_FRONTEND_TOKEN_LIST,
+  buildRobinhoodQuoteUrl,
+  type BestPathResponse,
+} from "@switch-win/sdk";
+```
+
+The same exports are available from the smaller network entrypoint:
+
+```ts
+import {
+  ROBINHOOD_CHAIN,
+  ROBINHOOD_TOKENS,
+  buildRobinhoodQuoteUrl,
+} from "@switch-win/sdk/networks/robinhood";
+```
+
+## Authentication
+
+Every request to `quote.switch.win` requires a Switch API key in the
+`x-api-key` header:
+
+```ts
+const headers = {
+  "x-api-key": process.env.SWITCH_API_KEY!,
+};
+```
+
+Do not expose a production API key in browser JavaScript. Browser applications
+should call a same-origin server route that attaches the key before forwarding
+the request to Switch.
+
+## Network configuration
+
+`ROBINHOOD_CHAIN` can be adapted directly for most wallet libraries:
+
+```ts
+const robinhoodWalletChain = {
+  chainId: `0x${ROBINHOOD_CHAIN.id.toString(16)}`,
+  chainName: ROBINHOOD_CHAIN.name,
+  nativeCurrency: ROBINHOOD_CHAIN.nativeCurrency,
+  rpcUrls: [...ROBINHOOD_CHAIN.rpcUrls],
+  blockExplorerUrls: [ROBINHOOD_CHAIN.blockExplorerUrl],
+};
+
+await window.ethereum.request({
+  method: "wallet_addEthereumChain",
+  params: [robinhoodWalletChain],
+});
+```
+
+## Contracts and native currency
+
+### Switch deployment
+
+| Contract | Address |
+|---|---|
+| SwitchRouter | `0x8730C3e2cF2c8CDa8E6166837A1Ed26f46aa9E59` |
+| SwitchRouterView | `0xFF6b56d3F444eB5b7FA1db047F57140C84810376` |
+| Uniswap V2 adapter | `0x7a14d7A8509a66209D4332843b983b29bF5604A4` |
+| Uniswap V3 adapter | `0xbcA08f296d9Ba0dc19Aa0E05D355365cE29A3205` |
+
+The router constant is the ERC-20 approval target. Always submit the swap to
+`quote.tx.to`; do not replace the API-provided transaction target with a
+hardcoded address.
+
+### Native ETH and WETH
+
+Use `ROBINHOOD_NATIVE_ETH` when the user is selling or buying native ETH:
+
+```text
+0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE
+```
+
+Use `ROBINHOOD_TOKENS.WETH.address` for the wrapped ERC-20:
+
+```text
+0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73
+```
+
+Native ETH does not require approval. WETH and every other ERC-20 input token
+must be approved for `ROBINHOOD_SWITCH_CONTRACTS.router`.
+
+## Swap integration flow
+
+Use the same sequence as a PulseChain integration:
+
+1. Check both tokens with `/swap/checkTax`.
+2. Select `feeOnOutput` from the tax results and preferred fee-token order.
+3. Request `/swap/quote` with `network=robinhood`, the selected fee mode, and
+   `sender` when executable calldata is required.
+4. Approve the API-provided router target for ERC-20 input tokens.
+5. Submit `quote.tx` for fee-on-input or `quote.txFeeOnOutput` for
+   fee-on-output.
+6. Show `expectedOutputAmount`, `minAmountOut`, route allocation, and detected
+   taxes to the user.
+
+Any swap involving a tax token is routed entirely through Uniswap V2. This
+also applies when both input and output are tax tokens.
+
+## Quickstart
+
+`amount` is always a raw integer amount in the input token's smallest unit.
+The following requests a quote for `0.001 ETH -> USDG`:
+
+```ts
+// This simple pair uses fee-on-input. See "Selecting feeOnOutput" below for
+// the recommended dynamic selection when community or tax tokens are involved.
+const feeOnOutput = false;
+
+const url = buildRobinhoodQuoteUrl({
+  from: ROBINHOOD_NATIVE_ETH,
+  to: ROBINHOOD_TOKENS.USDG.address,
+  amount: 1_000_000_000_000_000n,
+  sender: walletAddress,
+  slippage: 50, // 0.50%, expressed in basis points
+  feeOnOutput,
+});
+
+const response = await fetch(url, {
+  headers: { "x-api-key": process.env.SWITCH_API_KEY! },
+});
+
+if (!response.ok) {
+  throw new Error(`Switch quote failed: ${response.status}`);
+}
+
+const quote = (await response.json()) as BestPathResponse;
+const transaction = feeOnOutput ? quote.txFeeOnOutput : quote.tx;
+
+if (!transaction) {
+  throw new Error("Quote did not include the selected transaction variant");
+}
+```
+
+Equivalent curl request:
+
+```bash
+curl -H "x-api-key: YOUR_KEY" \
+  "https://quote.switch.win/swap/quote?network=robinhood&from=0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE&to=0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168&amount=1000000000000000&sender=0xYOUR_WALLET&slippage=50"
+```
+
+Omit `sender` for a display-only quote. Fetch again with the sender immediately
+before execution to receive current transaction calldata.
+
+## Tax-token checks
+
+Robinhood tokens can apply pair-specific transfer taxes. Check both input and
+output tokens before requesting or executing a swap:
+
+```ts
+async function checkTax(token: string) {
+  const query = new URLSearchParams({ network: "robinhood", token });
+  const response = await fetch(
+    `https://quote.switch.win/swap/checkTax?${query}`,
+    { headers: { "x-api-key": process.env.SWITCH_API_KEY! } },
+  );
+
+  if (!response.ok) throw new Error(`Tax check failed: ${response.status}`);
+  return response.json();
+}
+
+const [inputTax, outputTax] = await Promise.all([
+  checkTax(tokenIn),
+  checkTax(tokenOut),
+]);
+```
+
+The quote response also includes `fromTokenTax`, `toTokenTax`,
+`expectedOutputAmount`, and effective-slippage fields. Display these values to
+the user rather than estimating taxes locally.
+
+## Selecting `feeOnOutput`
+
+`feeOnOutput` determines which side of the swap pays the Switch partner or
+protocol fee:
+
+| Value | Fee token | Transaction field |
+|---|---|---|
+| `false` | Input token | `quote.tx` |
+| `true` | Output token | `quote.txFeeOnOutput` |
+
+Choose the mode before requesting the executable quote and pass it to
+`buildRobinhoodQuoteUrl`. This keeps `expectedOutputAmount`, routing, and the
+transaction calldata aligned with the mode that will actually be submitted.
+
+For Robinhood Chain, the recommended selection order is:
+
+1. If both sides are tax tokens, use fee-on-input (`false`) to avoid the extra
+   output-token transfers required by fee-on-output.
+2. If only the output token has buy tax, use fee-on-input (`false`) to avoid
+   routing the taxed output through additional transfers.
+3. If only the input token has sell tax, use fee-on-output (`true`) so the fee
+   is collected in the non-tax output token.
+4. Otherwise, prefer collecting tokens in this order: WETH (with native ETH
+   treated equivalently), USDG, WALLET, SEEDCOIN, then CASHCAT.
+5. If neither token is preferred, default to fee-on-input (`false`).
+
+The no-tax priority list is:
+
+| Priority | Token | Address |
+|---:|---|---|
+| 1 | WETH / native ETH | `0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73` / native sentinel |
+| 2 | USDG | `0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168` |
+| 3 | WALLET | `0x0339f5459FC690aC85F1782e15782A151b4A9E1b` |
+| 4 | SEEDCOIN | `0x58f693A30F124E59b125F7c7b837b0F6bbAF5a45` |
+| 5 | CASHCAT | `0x020bfC650A365f8BB26819deAAbF3E21291018b4` |
+
+The ordered ERC-20 addresses are exported as
+`ROBINHOOD_FEE_TOKEN_PRIORITY`. When neither side is taxed, the selector takes
+the fee from whichever side contains the higher-priority token. If neither
+side is listed, it defaults to fee-on-input.
+
+```ts
+import {
+  buildRobinhoodQuoteUrl,
+  selectRobinhoodFeeOnOutput,
+  type BestPathResponse,
+} from "@switch-win/sdk";
+
+const feeOnOutput = selectRobinhoodFeeOnOutput(
+  tokenIn,
+  tokenOut,
+  inputTax,
+  outputTax,
+);
+
+const quoteUrl = buildRobinhoodQuoteUrl({
+  from: tokenIn,
+  to: tokenOut,
+  amount: amountIn,
+  sender: walletAddress,
+  slippage: 50,
+  feeOnOutput,
+});
+
+const quoteResponse = await fetch(quoteUrl, {
+  headers: { "x-api-key": process.env.SWITCH_API_KEY! },
+});
+if (!quoteResponse.ok) {
+  throw new Error(`Switch quote failed: ${quoteResponse.status}`);
+}
+
+const quote = (await quoteResponse.json()) as BestPathResponse;
+const transaction = feeOnOutput ? quote.txFeeOnOutput : quote.tx;
+if (!transaction) {
+  throw new Error("Quote did not include the selected transaction variant");
+}
+```
+
+Do not request one fee mode and submit the other transaction variant. Taxed
+output tokens are especially important: `feeOnOutput=true` makes the router
+receive and redistribute the output, which can trigger additional transfer-tax
+events.
+
+## Approving and executing
+
+For ERC-20 input:
+
+```ts
+const token = new ethers.Contract(
+  tokenIn,
+  ["function approve(address spender, uint256 amount) returns (bool)"],
+  signer,
+);
+
+await (
+  await token.approve(ROBINHOOD_SWITCH_CONTRACTS.router, amountIn)
+).wait();
+```
+
+Then submit the transaction returned by the API:
+
+```ts
+await signer.sendTransaction({
+  to: transaction.to,
+  data: transaction.data,
+  value: transaction.value,
+});
+```
+
+For native ETH input, skip approval and send the API-provided `value`.
+
+## Swap API reference
+
+All amounts are raw integer strings in the token's smallest unit. All token and
+wallet values are EVM addresses.
+
+### List adapters
+
+```http
+GET https://quote.switch.win/swap/adapters?network=robinhood
+x-api-key: YOUR_KEY
+```
+
+Robinhood currently returns:
+
+| Index | Adapter |
+|---:|---|
+| `0` | Uniswap V2 |
+| `1` | Uniswap V3 |
+
+Do not permanently hard-code the available adapter list in an integration.
+Fetch it when presenting routing-source controls. If a quote involves a tax
+token, the backend overrides routing to tax-safe adapter `0`; an explicit
+filter that excludes adapter `0` is rejected.
+
+### Check token tax
+
+```http
+GET https://quote.switch.win/swap/checkTax?network=robinhood&token=0xTOKEN
+```
+
+Example response:
+
+```json
+{
+  "token": "0x...",
+  "isTaxToken": true,
+  "buyTaxBps": 500,
+  "sellTaxBps": 300
+}
+```
+
+`500` basis points is `5%`. Use the input token's `sellTaxBps` and the output
+token's `buyTaxBps`. When both tokens are taxed, use fee-on-input.
+
+### Get swap quote
+
+```http
+GET https://quote.switch.win/swap/quote
+```
+
+| Query parameter | Required | Description |
+|---|:---:|---|
+| `network` | Yes | Must be `robinhood`. |
+| `from` | Yes | Input token address or `ROBINHOOD_NATIVE_ETH`. |
+| `to` | Yes | Output token address or `ROBINHOOD_NATIVE_ETH`. |
+| `amount` | Yes | Raw input amount. |
+| `sender` | No | Required when transaction calldata is needed. |
+| `receiver` | No | Output recipient; defaults to `sender`. |
+| `slippage` | No | Basis points; default `50` (`0.5%`). |
+| `fee` | No | Partner/protocol fee in basis points. |
+| `partnerAddress` | No | Fee-sharing recipient. |
+| `feeOnOutput` | No | `true` takes the fee from output; `false` takes it from input. |
+| `adapters` | No | Comma-separated adapter indices, such as `0,1`. |
+| `gasPrice` | No | Quote gas price in wei. |
+
+Omitting `sender` produces a display-only quote. Request a fresh executable
+quote with `sender` immediately before execution.
+
+### Quote response
+
+Important response fields:
+
+| Field | Description |
+|---|---|
+| `fromToken`, `toToken` | Normalized pair addresses. |
+| `totalAmountIn` | Gross input amount. |
+| `totalAmountOut` | Raw pool output before taxes and Switch fees. |
+| `expectedOutputAmount` | Expected user receipt after tax and fee, before slippage. |
+| `minAmountOut` | Minimum output encoded into calldata. |
+| `paths` | Human-readable route descriptions. |
+| `routeAllocation` | Structured split, hop, adapter, and fee-tier allocation. |
+| `fromTokenTax`, `toTokenTax` | Detected tax metadata. |
+| `effectiveSlippageBps` | Slippage plus applicable tax buffers. |
+| `tx` | Fee-on-input transaction; present when `sender` is supplied. |
+| `txFeeOnOutput` | Fee-on-output transaction; present when `sender` is supplied. |
+
+Treat the response as authoritative. Do not recalculate output taxes, route
+splits, minimum output, or calldata in the client.
+
+## Error handling
+
+The API can return an `{ "error": "..." }` object for validation or routing
+failures. Check both the HTTP status and the response body before using quote
+fields.
+
+Common Robinhood errors include:
+
+- Missing or unsupported `network`.
+- Invalid token, sender, receiver, or partner address.
+- Invalid raw amount, slippage, fee, gas price, or adapter filter.
+- A tax-token quote explicitly excluded the Uniswap V2 adapter.
+- No viable Uniswap V2/V3 route or insufficient liquidity.
+- RPC timeout or public-RPC rate limiting.
+- Missing executable transaction because `sender` was omitted.
+
+On-chain reverts can still occur if allowance, wallet balance, slippage,
+liquidity, token tax, or chain state changes after quoting. Fetch a fresh quote
+before retrying rather than resubmitting stale calldata.
+
+## Partner fee sharing
+
+Pass `fee` in basis points and `partnerAddress` in the quote request. The chosen
+fee mode determines the fee token:
+
+- `feeOnOutput=false`: collect from the input token and submit `quote.tx`.
+- `feeOnOutput=true`: collect from the output token and submit
+  `quote.txFeeOnOutput`.
+
+Always pass `feeOnOutput` while quoting so routing and
+`expectedOutputAmount` match the transaction variant you will execute. Partner
+fee eligibility and revenue share are controlled by the API-key agreement; do
+not assume that supplying an address alone enables sharing.
+
+## Tokens and routing
+
+### Curated frontend token list
+
+The token dropdown contains the following ERC-20 tokens. Native ETH is merged
+into the UI separately from this list.
+
+| Symbol | Name | Address | Decimals |
+|---|---|---|---:|
+| WETH | Wrapped Ether | `0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73` | 18 |
+| USDG | Global Dollar | `0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168` | 6 |
+| VIRTUAL | Virtuals Protocol | `0xc6911796042b15d7Fa4F6CDe69e245DdCd3d9c31` | 18 |
+| CASHCAT | Cash Cat | `0x020bfC650A365f8BB26819deAAbF3E21291018b4` | 18 |
+| WALLET | Robinhood Wallet | `0x0339f5459FC690aC85F1782e15782A151b4A9E1b` | 18 |
+| seedcoin | watch it grow | `0x58f693A30F124E59b125F7c7b837b0F6bbAF5a45` | 9 |
+| JUGGERNAUT | The Juggernaut | `0xD7321801CAae694090694Ff55A9323139F043B88` | 18 |
+| HOODRAT | Hoodrat | `0x8e62F281f282686fCa6dCB39288069a93fC23F1c` | 18 |
+| DIH | Dog In Hood | `0x17bb0C898254406b1Ea2e8E99B0C263e26c9E4a4` | 18 |
+| KITSU | KITSU | `0x8d4dFaaA4198b6486E0293Fec914C2B6a821D4DC` | 18 |
+| WEN | Wen Lambo | `0xA80eb66b3E0CF66ccB46f8b8C9e7ff5803eEb820` | 18 |
+| REPE | Robinhood Pepe | `0x5266eeafF092D6136AB63D18B975A60a0Cc0C8f7` | 18 |
+| TENDIES | TENDIES | `0x45242320DBB855EeA8Fd36804C6487E10E97FCF9` | 18 |
+| GME | GameStop | `0x7e86381A763F0Ecca2bDF27C54eAC403ddD48123` | 18 |
+| 4663 | 4663 | `0xd4052415613B34Af236024B895574c467f65b6dD` | 18 |
+| MARIAN | Lady Marian | `0x01637b14B7378B99dE75A64d50656d98488D9a4d` | 18 |
+
+The ordered list is exported as `ROBINHOOD_FRONTEND_TOKEN_LIST`.
+
+These community tokens are frontend conveniences, not an endorsement or a
+guarantee of liquidity, price stability, tax behavior, or contract safety.
+Always identify tokens by address and obtain a fresh quote and tax check.
+
+### Routing configuration
+
+Switch currently evaluates:
+
+- Uniswap V2 adapter index `0`.
+- Uniswap V3 adapter index `1`.
+- V3 fee tiers `100`, `500`, `3000`, and `10000`.
+- Trusted routing hubs WETH, USDG, VIRTUAL, and CASHCAT.
+
+If either side is detected as a transfer-tax token, the backend restricts the
+entire route (including every split and intermediate hop) to Uniswap V2. V3 is
+not considered for that quote.
+
+The API may split a quote across routes and adapters. Integrators should render
+the returned `paths` or `routeAllocation` instead of assuming a single path.
+
+## Rate limits
+
+Rate limits are assigned to the API key. A `429` response means the integration
+must back off. Use request coalescing and short-lived UI caching, avoid polling
+unchanged quotes, and debounce amount input before requesting a new route.
+
+For server integrations, contact Switch to coordinate the expected request
+rate and IP allowlisting. Do not distribute one production key across
+untrusted clients.
+
+## Current limitations
+
+- Robinhood limit orders are not deployed.
+- Rialto DEX is not integrated.
+- Quotes currently use Uniswap V2 and V3 liquidity.
+- Contract and token addresses must be treated as chain-specific.
+
+See the main [SDK reference](README.md) for authentication, partner fees,
+response types, error handling, and the complete swap API schema.
+
+## Support
+
+- Documentation: <https://docs.switch.win>
+- Website: <https://switch.win>
+- Quote API: <https://quote.switch.win>
+
+## License
+
+See [LICENSE](LICENSE).

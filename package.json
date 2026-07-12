@@ -1,7 +1,7 @@
 {
   "name": "@switch-win/sdk",
-  "version": "1.1.0",
-  "description": "Official integration kit for the Switch DEX Aggregator on PulseChain — types, constants, ABIs, limit orders, and examples",
+  "version": "1.2.0",
+  "description": "Official integration kit for the Switch DEX Aggregator on PulseChain and Robinhood Chain",
   "author": "BuildTheTech",
   "license": "MIT",
   "repository": {
@@ -13,6 +13,7 @@
     "dex",
     "aggregator",
     "pulsechain",
+    "robinhood-chain",
     "swap",
     "limit-order",
     "eip712",
@@ -26,6 +27,8 @@
     ".": "./src/index.ts",
     "./types": "./src/types.ts",
     "./constants": "./src/constants.ts",
+    "./networks": "./src/networks/index.ts",
+    "./networks/robinhood": "./src/networks/robinhood.ts",
     "./limit-orders": "./src/limit-orders.ts",
     "./abi": "./abi/SwitchRouterABI.json",
     "./abi/limit-order": "./abi/SwitchLimitOrderABI.json"
@@ -33,7 +36,8 @@
   "files": [
     "src/",
     "abi/",
-    "README.md"
+    "README.md",
+    "ROBINHOOD.md"
   ],
   "devDependencies": {
     "typescript": "^5.9.3"
