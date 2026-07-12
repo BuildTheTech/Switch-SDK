@@ -11,7 +11,7 @@ Production integration reference for Switch swaps on Robinhood Chain mainnet.
 | Explorer | `https://robinhoodchain.blockscout.com` |
 | Quote API | `https://quote.switch.win/swap/quote` |
 | Tax API | `https://quote.switch.win/swap/checkTax` |
-| Supported liquidity | Uniswap V2 and Uniswap V3 |
+| Supported liquidity | Uniswap V2 and V3 live; hookless static-fee Uniswap V4 pending adapter deployment and activation |
 | Limit orders | Not currently available |
 
 ## Contents
@@ -20,6 +20,7 @@ Production integration reference for Switch swaps on Robinhood Chain mainnet.
 - [Authentication](#authentication)
 - [Network configuration](#network-configuration)
 - [Contracts and native currency](#contracts-and-native-currency)
+- [Uniswap V4 routing](#uniswap-v4-routing)
 - [Swap integration flow](#swap-integration-flow)
 - [Quickstart](#quickstart)
 - [Tax-token checks](#tax-token-checks)
@@ -43,6 +44,7 @@ import {
   ROBINHOOD_CHAIN,
   ROBINHOOD_NATIVE_ETH,
   ROBINHOOD_SWITCH_CONTRACTS,
+  ROBINHOOD_UNISWAP_CONTRACTS,
   ROBINHOOD_TOKENS,
   ROBINHOOD_FEE_TOKEN_PRIORITY,
   ROBINHOOD_FRONTEND_DEFAULT_TOKENS,
@@ -126,6 +128,63 @@ Use `ROBINHOOD_TOKENS.WETH.address` for the wrapped ERC-20:
 
 Native ETH does not require approval. WETH and every other ERC-20 input token
 must be approved for `ROBINHOOD_SWITCH_CONTRACTS.router`.
+
+## Uniswap V4 routing
+
+Switch's Robinhood V4 integration is designed for canonical Uniswap V4, whose
+pools share one `PoolManager`. A V4 pool is identified by its complete
+`PoolKey`:
+
+```ts
+type PoolKey = {
+  currency0: string;
+  currency1: string;
+  fee: number;
+  tickSpacing: number;
+  hooks: string;
+};
+```
+
+Do not treat V4 pools as V3 pools with another fee-tier list. The `fee`,
+`tickSpacing`, and `hooks` values are all part of pool identity, and Robinhood
+V4 discovery must preserve the full key. The backend selects the key and
+embeds adapter-specific route data in the quote; clients should submit the
+returned transaction unchanged rather than reconstructing V4 calldata.
+
+Phase one supports **hookless static-fee pools only** (`hooks` is the zero
+address, hook data is empty, and the dynamic-fee flag is not set). Pools with
+custom hooks or dynamic fees are not considered until their behavior and
+required hook data have been explicitly reviewed and allowed. This restriction
+does not reduce V2 or V3 routing coverage.
+
+V4 can represent native ETH as the zero-address currency. Switch routes use
+the canonical Robinhood WETH address, so the V4 adapter unwraps WETH when a
+selected pool consumes native ETH and wraps native ETH when that pool produces
+it. API callers should continue using `ROBINHOOD_NATIVE_ETH` for a native user
+input/output and `ROBINHOOD_TOKENS.WETH.address` for the ERC-20.
+
+Adapter index `2` is reserved for the Robinhood Uniswap V4 adapter. It is not
+live until the adapter has been deployed, whitelisted in the existing
+SwitchRouter, configured in the backend, and advertised by
+`GET /swap/adapters?network=robinhood`. No V4 adapter address is exported yet;
+do not hard-code or force index `2` before the endpoint advertises it.
+
+The canonical Robinhood V4 infrastructure is available through
+`ROBINHOOD_UNISWAP_CONTRACTS`:
+
+| Contract | Address |
+|---|---|
+| PoolManager | `0x8366a39cc670b4001a1121b8f6a443a643e40951` |
+| PositionDescriptor | `0x9639443158e8c5efa35bd45287bf2effd3d8dc06` |
+| PositionManager | `0x58daec3116aae6d93017baaea7749052e8a04fa7` |
+| Quoter | `0x8dc178efb8111bb0973dd9d722ebeff267c98f94` |
+| StateView | `0xf3334192d15450cdd385c8b70e03f9a6bd9e673b` |
+| Universal Router | `0x8876789976decbfcbbbe364623c63652db8c0904` |
+| Permit2 | `0x000000000022D473030F116dDEE9F6B43aC78BA3` |
+
+Tax-token safety is unchanged: if either side is detected as a transfer-tax
+token, the complete route is restricted to Uniswap V2 adapter index `0`.
+Uniswap V3 and V4 are both excluded from that quote.
 
 ## Swap integration flow
 
@@ -249,7 +308,7 @@ The no-tax priority list is:
 | 1 | WETH / native ETH | `0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73` / native sentinel |
 | 2 | USDG | `0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168` |
 | 3 | WALLET | `0x0339f5459FC690aC85F1782e15782A151b4A9E1b` |
-| 4 | SEEDCOIN | `0x58f693A30F124E59b125F7c7b837b0F6bbAF5a45` |
+| 4 | SEEDCOIN | `0xD8d1C08A8bA4fc64BAC744f74290B89ADcb6Bf25` |
 | 5 | CASHCAT | `0x020bfC650A365f8BB26819deAAbF3E21291018b4` |
 
 The ordered ERC-20 addresses are exported as
@@ -346,6 +405,10 @@ Robinhood currently returns:
 | `0` | Uniswap V2 |
 | `1` | Uniswap V3 |
 
+After production activation, the same endpoint will also advertise Uniswap V4
+at index `2`. Treat the endpoint response, not this document, as the source of
+truth for whether V4 is currently selectable.
+
 Do not permanently hard-code the available adapter list in an integration.
 Fetch it when presenting routing-source controls. If a quote involves a tax
 token, the backend overrides routing to tax-safe adapter `0`; an explicit
@@ -389,7 +452,7 @@ GET https://quote.switch.win/swap/quote
 | `fee` | No | Partner/protocol fee in basis points. |
 | `partnerAddress` | No | Fee-sharing recipient. |
 | `feeOnOutput` | No | `true` takes the fee from output; `false` takes it from input. |
-| `adapters` | No | Comma-separated adapter indices, such as `0,1`. |
+| `adapters` | No | Comma-separated indices returned by `/swap/adapters`, such as `0,1`. Do not request pending index `2` until it is advertised. |
 | `gasPrice` | No | Quote gas price in wei. |
 
 Omitting `sender` produces a display-only quote. Request a fresh executable
@@ -407,7 +470,7 @@ Important response fields:
 | `expectedOutputAmount` | Expected user receipt after tax and fee, before slippage. |
 | `minAmountOut` | Minimum output encoded into calldata. |
 | `paths` | Human-readable route descriptions. |
-| `routeAllocation` | Structured split, hop, adapter, and fee-tier allocation. |
+| `routeAllocation` | Structured split, hop, adapter, and pool-specific route allocation. V4 PoolKey data is encoded in the executable transaction and must not be reconstructed client-side. |
 | `fromTokenTax`, `toTokenTax` | Detected tax metadata. |
 | `effectiveSlippageBps` | Slippage plus applicable tax buffers. |
 | `tx` | Fee-on-input transaction; present when `sender` is supplied. |
@@ -428,7 +491,7 @@ Common Robinhood errors include:
 - Invalid token, sender, receiver, or partner address.
 - Invalid raw amount, slippage, fee, gas price, or adapter filter.
 - A tax-token quote explicitly excluded the Uniswap V2 adapter.
-- No viable Uniswap V2/V3 route or insufficient liquidity.
+- No viable route across the currently active adapters, or insufficient liquidity.
 - RPC timeout or public-RPC rate limiting.
 - Missing executable transaction because `sender` was omitted.
 
@@ -464,7 +527,7 @@ into the UI separately from this list.
 | VIRTUAL | Virtuals Protocol | `0xc6911796042b15d7Fa4F6CDe69e245DdCd3d9c31` | 18 |
 | CASHCAT | Cash Cat | `0x020bfC650A365f8BB26819deAAbF3E21291018b4` | 18 |
 | WALLET | Robinhood Wallet | `0x0339f5459FC690aC85F1782e15782A151b4A9E1b` | 18 |
-| seedcoin | watch it grow | `0x58f693A30F124E59b125F7c7b837b0F6bbAF5a45` | 9 |
+| seedcoin | watch it grow | `0xD8d1C08A8bA4fc64BAC744f74290B89ADcb6Bf25` | 9 |
 | JUGGERNAUT | The Juggernaut | `0xD7321801CAae694090694Ff55A9323139F043B88` | 18 |
 | HOODRAT | Hoodrat | `0x8e62F281f282686fCa6dCB39288069a93fC23F1c` | 18 |
 | DIH | Dog In Hood | `0x17bb0C898254406b1Ea2e8E99B0C263e26c9E4a4` | 18 |
@@ -491,9 +554,15 @@ Switch currently evaluates:
 - V3 fee tiers `100`, `500`, `3000`, and `10000`.
 - Trusted routing hubs WETH, USDG, VIRTUAL, and CASHCAT.
 
+The prepared V4 integration reserves adapter index `2`. Once activated, it
+discovers hookless static-fee V4 pools by complete `PoolKey` rather than
+applying the V3 fee-tier list. Native-ETH V4 currencies are normalized through the WETH/native
+alias described above. Until `/swap/adapters` returns index `2`, V4 is not part
+of live production quotes.
+
 If either side is detected as a transfer-tax token, the backend restricts the
 entire route (including every split and intermediate hop) to Uniswap V2. V3 is
-not considered for that quote.
+not considered for that quote, and V4 will remain excluded after activation.
 
 The API may split a quote across routes and adapters. Integrators should render
 the returned `paths` or `routeAllocation` instead of assuming a single path.
@@ -512,7 +581,12 @@ untrusted clients.
 
 - Robinhood limit orders are not deployed.
 - Rialto DEX is not integrated.
-- Quotes currently use Uniswap V2 and V3 liquidity.
+- Production quotes currently use Uniswap V2 and V3 liquidity. Hookless V4
+  routing is pending adapter deployment, router whitelisting, and backend
+  activation.
+- The first V4 phase intentionally excludes hooked and dynamic-fee pools.
+- A V4 allocation currently selects its best single PoolKey; intra-V4
+  multi-pool splitting is not yet enabled. V4 can still split against V2/V3.
 - Contract and token addresses must be treated as chain-specific.
 
 See the main [SDK reference](README.md) for authentication, partner fees,

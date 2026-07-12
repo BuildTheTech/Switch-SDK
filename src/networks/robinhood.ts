@@ -27,6 +27,8 @@ export const ROBINHOOD_SWITCH_CONTRACTS = {
   routerView: "0xFF6b56d3F444eB5b7FA1db047F57140C84810376",
   uniswapV2Adapter: "0x7a14d7A8509a66209D4332843b983b29bF5604A4",
   uniswapV3Adapter: "0xbcA08f296d9Ba0dc19Aa0E05D355365cE29A3205",
+  // The V4 adapter is intentionally omitted until it is deployed and
+  // activated in the production router's adapter list.
 } as const;
 
 /** Uniswap contracts used by the Robinhood Switch deployment. */
@@ -35,6 +37,14 @@ export const ROBINHOOD_UNISWAP_CONTRACTS = {
   v3Factory: "0x1f7d7550B1b028f7571E69A784071F0205FD2EfA",
   v3QuoterV2: "0x33e885eD0Ec9bF04EcfB19341582aADCb4c8A9E7",
   v3SwapRouter02: "0xCaf681a66D020601342297493863E78C959E5cb2",
+  /** Canonical Uniswap V4 singleton and periphery deployments. */
+  v4PoolManager: "0x8366a39cc670b4001a1121b8f6a443a643e40951",
+  v4PositionDescriptor: "0x9639443158e8c5efa35bd45287bf2effd3d8dc06",
+  v4PositionManager: "0x58daec3116aae6d93017baaea7749052e8a04fa7",
+  v4Quoter: "0x8dc178efb8111bb0973dd9d722ebeff267c98f94",
+  v4StateView: "0xf3334192d15450cdd385c8b70e03f9a6bd9e673b",
+  v4UniversalRouter: "0x8876789976decbfcbbbe364623c63652db8c0904",
+  permit2: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
 } as const;
 
 export interface RobinhoodToken {
@@ -83,7 +93,7 @@ export const ROBINHOOD_TOKENS = {
     decimals: 18,
   },
   SEEDCOIN: {
-    address: "0x58f693A30F124E59b125F7c7b837b0F6bbAF5a45",
+    address: "0xD8d1C08A8bA4fc64BAC744f74290B89ADcb6Bf25",
     symbol: "seedcoin",
     name: "watch it grow",
     decimals: 9,
