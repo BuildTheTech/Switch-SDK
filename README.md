@@ -7,7 +7,7 @@
 
 Everything partners need to integrate Switch swaps and limit orders — API docs, TypeScript types, ABIs, constants, and ready-to-use examples.
 
-**Swap API:** `https://quote.switch.win` &nbsp;|&nbsp; **Swap chains:** PulseChain (369), Robinhood Chain (4663) &nbsp;|&nbsp; **Limit orders:** PulseChain
+**Swap API:** `https://quote.switch.win` &nbsp;|&nbsp; **Swap chains:** PulseChain (369), Robinhood Chain (4663) &nbsp;|&nbsp; **Limit orders:** PulseChain and Robinhood Chain
 
 ---
 
@@ -149,7 +149,8 @@ const response = await fetch(url, {
 
 Always approve `ROBINHOOD_SWITCH_CONTRACTS.router` for ERC-20 input, but submit
 the transaction to `quote.tx.to` so integrations remain safe across router
-upgrades. Limit-order helpers in this package remain PulseChain-only.
+upgrades. Robinhood limit-order deployment constants and EIP-712 domain values
+are exported from `src/networks/robinhood.ts`.
 
 ---
 

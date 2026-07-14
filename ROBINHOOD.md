@@ -108,6 +108,9 @@ await window.ethereum.request({
 | Uniswap V2 adapter | `0x7a14d7A8509a66209D4332843b983b29bF5604A4` |
 | Uniswap V3 adapter | `0xbcA08f296d9Ba0dc19Aa0E05D355365cE29A3205` |
 | Uniswap V4 adapter | `0x754dDCD05aFbAd1cc7Bc42B9268EB586F579E7F6` |
+| SwitchLimitOrder | `0x752c50DDd3B426cAE3D7A995F313Ac74ac6B0230` |
+| Native ETH flow | `0x029FfC6aF9112eA078f1D6f4a98826DDB2136cf6` |
+| Switch Limit Order adapter (index 3) | `0x412F625072c10e58C619D1e0b3C95cd3d5689871` |
 
 The V4 adapter was created in
 [deployment transaction `0x60d5...34a7`](https://robinhoodchain.blockscout.com/tx/0x60d56466a8162a643a15ecde98322ec05ea23d44d03fbd817df4ddbaef4834a7)
@@ -134,6 +137,35 @@ Use `ROBINHOOD_TOKENS.WETH.address` for the wrapped ERC-20:
 
 Native ETH does not require approval. WETH and every other ERC-20 input token
 must be approved for `ROBINHOOD_SWITCH_CONTRACTS.router`.
+
+### Limit orders
+
+Robinhood ERC-20 limit orders use the same EIP-712 `LimitOrder` structure as
+PulseChain, with these network-specific domain values:
+
+```ts
+import {
+  ROBINHOOD_LIMIT_ORDER_EIP712_DOMAIN,
+  ROBINHOOD_SWITCH_CONTRACTS,
+} from "@switch-win/sdk";
+
+// { name: "SwitchLimitOrder", version: "2", chainId: 4663,
+//   verifyingContract: "0x752c...0230" }
+await signer.signTypedData(
+  ROBINHOOD_LIMIT_ORDER_EIP712_DOMAIN,
+  LIMIT_ORDER_EIP712_TYPES,
+  order,
+);
+```
+
+Submit signed orders to `POST /limit-orders?network=robinhood`. For
+`feeOnOutput=false`, approve `ROBINHOOD_SWITCH_CONTRACTS.limitOrder`; for
+`feeOnOutput=true`, approve `ROBINHOOD_SWITCH_CONTRACTS.router`.
+
+Native ETH input orders are created on-chain through
+`ROBINHOOD_SWITCH_CONTRACTS.nativeEthFlow` and are indexed from its events; do
+not POST them as signed EOA orders. Native ETH output is represented by WETH in
+the order with `unwrapOutput=true`.
 
 ## Uniswap V4 routing
 
@@ -315,7 +347,7 @@ The no-tax priority list is:
 | 1 | WETH / native ETH | `0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73` / native sentinel |
 | 2 | USDG | `0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168` |
 | 3 | WALLET | `0x0339f5459FC690aC85F1782e15782A151b4A9E1b` |
-| 4 | SEEDCOIN | `0xD8d1C08A8bA4fc64BAC744f74290B89ADcb6Bf25` |
+| 4 | SEEDCOIN | `0x58f693A30F124E59b125F7c7b837b0F6bbAF5a45` |
 | 5 | CASHCAT | `0x020bfC650A365f8BB26819deAAbF3E21291018b4` |
 
 The ordered ERC-20 addresses are exported as
@@ -534,7 +566,7 @@ into the UI separately from this list.
 | VIRTUAL | Virtuals Protocol | `0xc6911796042b15d7Fa4F6CDe69e245DdCd3d9c31` | 18 |
 | CASHCAT | Cash Cat | `0x020bfC650A365f8BB26819deAAbF3E21291018b4` | 18 |
 | WALLET | Robinhood Wallet | `0x0339f5459FC690aC85F1782e15782A151b4A9E1b` | 18 |
-| seedcoin | watch it grow | `0xD8d1C08A8bA4fc64BAC744f74290B89ADcb6Bf25` | 18 |
+| SEEDCOIN | Seedcoin | `0x58f693A30F124E59b125F7c7b837b0F6bbAF5a45` | 18 |
 | JUGGERNAUT | The Juggernaut | `0xD7321801CAae694090694Ff55A9323139F043B88` | 18 |
 | HOODRAT | Hoodrat | `0x8e62F281f282686fCa6dCB39288069a93fC23F1c` | 18 |
 | DIH | Dog In Hood | `0x17bb0C898254406b1Ea2e8E99B0C263e26c9E4a4` | 18 |

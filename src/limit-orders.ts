@@ -107,7 +107,8 @@ export interface BuildLimitOrderOptions {
    *   one tax. Avoids the double sell-tax of maker → LO → pool.)
    * - **Tax output token** → set `feeOnOutput: false` (default)
    *   (Output goes directly to recipient in one transfer.)
-   * - **Both tokens tax** → not supported (frontend blocks this)
+   * - **Both tokens tax** → use `feeOnOutput: false`; execution is restricted
+   *   to tax-compatible Uniswap V2 routing.
    *
    * **Bottom line:** Use `feeOnOutput: false` (default) unless the input
    * token is a tax token. This gives operators maximum flexibility and
@@ -181,13 +182,16 @@ export function buildLimitOrder(options: BuildLimitOrderOptions): LimitOrderPara
  * const signature = await signer._signTypedData(domain, types, order);
  * ```
  */
-export function getEIP712SigningParams(limitOrderContract?: string) {
+export function getEIP712SigningParams(
+  limitOrderContract?: string,
+  chainId: number = 369,
+) {
   if (limitOrderContract) {
     return {
       domain: {
         name: "SwitchLimitOrder" as const,
         version: "2" as const,
-        chainId: 369 as const,
+        chainId,
         verifyingContract: limitOrderContract,
       },
       types: LIMIT_ORDER_EIP712_TYPES,
@@ -225,8 +229,8 @@ export function getApprovalTarget(limitOrderContract?: string): string {
  *
  * @returns The SwitchRouter contract address
  */
-export function getRouterApprovalTarget(): string {
-  return SWITCH_ROUTER;
+export function getRouterApprovalTarget(routerContract?: string): string {
+  return routerContract || SWITCH_ROUTER;
 }
 
 /**
@@ -235,8 +239,11 @@ export function getRouterApprovalTarget(): string {
  * Returns `true` only if `tokenOut` is WPLS (the output will be unwrapped
  * to native PLS by the contract).
  */
-export function shouldUnwrapOutput(tokenOut: string): boolean {
-  return tokenOut.toLowerCase() === WPLS.toLowerCase();
+export function shouldUnwrapOutput(
+  tokenOut: string,
+  wrappedNativeToken: string = WPLS,
+): boolean {
+  return tokenOut.toLowerCase() === wrappedNativeToken.toLowerCase();
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -251,8 +258,19 @@ export function shouldUnwrapOutput(tokenOut: string): boolean {
  *
  * @returns The SwitchPLSFlow contract address
  */
-export function getPLSFlowAddress(): string {
-  return SWITCH_PLS_FLOW;
+export function getPLSFlowAddress(nativeFlowContract?: string): string {
+  return nativeFlowContract || SWITCH_PLS_FLOW;
+}
+
+export interface LimitOrderNetworkOptions {
+  network?: "pulsechain" | "robinhood";
+}
+
+function endpointForNetwork(endpoint: string, network?: string): string {
+  if (!network) return endpoint;
+  const url = new URL(endpoint);
+  url.searchParams.set("network", network);
+  return url.toString();
 }
 
 /**
@@ -314,8 +332,9 @@ export function isNativePLS(tokenIn: string): boolean {
  */
 export async function submitLimitOrder(
   signedOrder: SignedLimitOrder,
+  options: LimitOrderNetworkOptions = {},
 ): Promise<CreateLimitOrderResponse | ErrorResponse> {
-  const res = await fetch(LIMIT_ORDERS_ENDPOINT, {
+  const res = await fetch(endpointForNetwork(LIMIT_ORDERS_ENDPOINT, options.network), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(signedOrder),
@@ -339,8 +358,9 @@ export async function submitLimitOrder(
 export async function cancelLimitOrder(
   maker: string,
   nonce: number,
+  options: LimitOrderNetworkOptions = {},
 ): Promise<CancelLimitOrderResponse | ErrorResponse> {
-  const res = await fetch(LIMIT_ORDERS_ENDPOINT, {
+  const res = await fetch(endpointForNetwork(LIMIT_ORDERS_ENDPOINT, options.network), {
     method: "DELETE",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ maker, nonce }),
@@ -351,6 +371,8 @@ export async function cancelLimitOrder(
 
 /** Filter options for listing limit orders */
 export interface ListLimitOrdersOptions {
+  /** Backend network process to query. */
+  network?: "pulsechain" | "robinhood";
   /** Filter by order status. Default: `"ACTIVE"` */
   status?: LimitOrderStatus;
   /** Filter by maker address */
@@ -416,6 +438,7 @@ export async function fetchLimitOrders(
   if (options.pair)     params.set("pair", options.pair);
   if (options.limit != null)  params.set("limit", String(options.limit));
   if (options.offset != null) params.set("offset", String(options.offset));
+  if (options.network) params.set("network", options.network);
 
   const url = params.toString()
     ? `${LIMIT_ORDERS_ENDPOINT}?${params}`
@@ -435,8 +458,11 @@ export async function fetchLimitOrders(
 export async function fetchLimitOrder(
   maker: string,
   nonce: number,
+  options: LimitOrderNetworkOptions = {},
 ): Promise<LimitOrderRecord | ErrorResponse> {
-  const res = await fetch(`${LIMIT_ORDERS_ENDPOINT}/${maker}/${nonce}`);
+  const res = await fetch(
+    endpointForNetwork(`${LIMIT_ORDERS_ENDPOINT}/${maker}/${nonce}`, options.network),
+  );
   return res.json() as Promise<LimitOrderRecord | ErrorResponse>;
 }
 
@@ -445,8 +471,10 @@ export async function fetchLimitOrder(
  *
  * Useful for displaying which token pairs have open limit orders.
  */
-export async function fetchLimitOrderPairs(): Promise<LimitOrderPair[]> {
-  const res = await fetch(LIMIT_ORDER_PAIRS_ENDPOINT);
+export async function fetchLimitOrderPairs(
+  options: LimitOrderNetworkOptions = {},
+): Promise<LimitOrderPair[]> {
+  const res = await fetch(endpointForNetwork(LIMIT_ORDER_PAIRS_ENDPOINT, options.network));
   return res.json() as Promise<LimitOrderPair[]>;
 }
 
@@ -455,7 +483,9 @@ export async function fetchLimitOrderPairs(): Promise<LimitOrderPair[]> {
  *
  * Returns counts of active, filled, cancelled, and expired orders.
  */
-export async function fetchLimitOrderStats(): Promise<LimitOrderStats> {
-  const res = await fetch(LIMIT_ORDER_STATS_ENDPOINT);
+export async function fetchLimitOrderStats(
+  options: LimitOrderNetworkOptions = {},
+): Promise<LimitOrderStats> {
+  const res = await fetch(endpointForNetwork(LIMIT_ORDER_STATS_ENDPOINT, options.network));
   return res.json() as Promise<LimitOrderStats>;
 }

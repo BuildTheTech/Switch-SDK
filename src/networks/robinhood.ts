@@ -28,6 +28,18 @@ export const ROBINHOOD_SWITCH_CONTRACTS = {
   uniswapV2Adapter: "0x7a14d7A8509a66209D4332843b983b29bF5604A4",
   uniswapV3Adapter: "0xbcA08f296d9Ba0dc19Aa0E05D355365cE29A3205",
   uniswapV4Adapter: "0x754dDCD05aFbAd1cc7Bc42B9268EB586F579E7F6",
+  limitOrder: "0x752c50DDd3B426cAE3D7A995F313Ac74ac6B0230",
+  nativeEthFlow: "0x029FfC6aF9112eA078f1D6f4a98826DDB2136cf6",
+  limitOrderAdapter: "0x412F625072c10e58C619D1e0b3C95cd3d5689871",
+  limitOrderAdapterIndex: 3,
+} as const;
+
+/** EIP-712 domain used for Robinhood ERC-20 limit-order signatures. */
+export const ROBINHOOD_LIMIT_ORDER_EIP712_DOMAIN = {
+  name: "SwitchLimitOrder",
+  version: "2",
+  chainId: ROBINHOOD_CHAIN.id,
+  verifyingContract: ROBINHOOD_SWITCH_CONTRACTS.limitOrder,
 } as const;
 
 /** Uniswap contracts used by the Robinhood Switch deployment. */
@@ -92,9 +104,9 @@ export const ROBINHOOD_TOKENS = {
     decimals: 18,
   },
   SEEDCOIN: {
-    address: "0xD8d1C08A8bA4fc64BAC744f74290B89ADcb6Bf25",
-    symbol: "seedcoin",
-    name: "watch it grow",
+    address: "0x58f693A30F124E59b125F7c7b837b0F6bbAF5a45",
+    symbol: "SEEDCOIN",
+    name: "Seedcoin",
     decimals: 18,
   },
   JUGGERNAUT: {
