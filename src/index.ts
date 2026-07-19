@@ -46,6 +46,7 @@ export type {
   ListLimitOrdersResponse,
   LimitOrderPair,
   LimitOrderStats,
+  LimitOrderConfigResponse,
   LimitOrderMutationResponse,
 } from "./types.js";
 
@@ -96,22 +97,32 @@ export {
 export {
   buildLimitOrder,
   getEIP712SigningParams,
+  getNetworkEIP712SigningParams,
+  getLimitOrderNetworkConfig,
+  getLimitOrderApprovalTarget,
   getApprovalTarget,
   getRouterApprovalTarget,
   shouldUnwrapOutput,
   getPLSFlowAddress,
+  getNativeFlowAddress,
   isNativePLS,
+  isNativeCurrency,
   submitLimitOrder,
   cancelLimitOrder,
   fetchLimitOrders,
   fetchLimitOrder,
   fetchLimitOrderPairs,
+  fetchLimitOrderConfig,
   fetchLimitOrderStats,
+  LIMIT_ORDER_NETWORK_CONFIGS,
 } from "./limit-orders.js";
 
 export type {
   BuildLimitOrderOptions,
   ListLimitOrdersOptions,
+  LimitOrderNetwork,
+  LimitOrderNetworkConfig,
+  LimitOrderNetworkOptions,
 } from "./limit-orders.js";
 
 // Network-specific swap configuration
@@ -119,6 +130,7 @@ export {
   ROBINHOOD_NETWORK,
   ROBINHOOD_CHAIN,
   ROBINHOOD_NATIVE_ETH,
+  ROBINHOOD_LIMIT_ORDER_EIP712_DOMAIN,
   ROBINHOOD_SWITCH_CONTRACTS,
   ROBINHOOD_UNISWAP_CONTRACTS,
   ROBINHOOD_TOKENS,

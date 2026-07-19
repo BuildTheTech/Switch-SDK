@@ -169,6 +169,42 @@ export const ROBINHOOD_TOKENS = {
     name: "Lady Marian",
     decimals: 18,
   },
+  INDEX: {
+    address: "0x56910D4409F3a0C78C64DD8D0545FF0705389870",
+    symbol: "Index",
+    name: "The Index",
+    decimals: 18,
+  },
+  VEX: {
+    address: "0x8Ff92566f2e81BDd68EDfAa8cde73942A723796b",
+    symbol: "VEX",
+    name: "ProjectVex",
+    decimals: 18,
+  },
+  HOODIE: {
+    address: "0xC72c01AAB5f5678dc1d6f5C6d2B417d91D402Ba3",
+    symbol: "HOODIE",
+    name: "HOODIE",
+    decimals: 18,
+  },
+  WISHBONE: {
+    address: "0x77581054581B9c525E7dd7a0155DE43867532d03",
+    symbol: "WISHBONE",
+    name: "WISHBONE",
+    decimals: 18,
+  },
+  VLAD: {
+    address: "0x31BE8f7485e36928C9De86566c62da82d4B6BF81",
+    symbol: "VLAD",
+    name: "The Green Bull",
+    decimals: 18,
+  },
+  AEON: {
+    address: "0xd4c93eD1843606f92CccA078941f3d52A585982f",
+    symbol: "AEON",
+    name: "Aeon",
+    decimals: 18,
+  },
 } as const satisfies Readonly<Record<string, RobinhoodToken>>;
 
 /** Exact ERC-20 ordering used by the Switch Robinhood token dropdown. */
@@ -189,6 +225,12 @@ export const ROBINHOOD_FRONTEND_TOKEN_LIST = [
   ROBINHOOD_TOKENS.GME,
   ROBINHOOD_TOKENS.TOKEN_4663,
   ROBINHOOD_TOKENS.MARIAN,
+  ROBINHOOD_TOKENS.INDEX,
+  ROBINHOOD_TOKENS.VEX,
+  ROBINHOOD_TOKENS.HOODIE,
+  ROBINHOOD_TOKENS.WISHBONE,
+  ROBINHOOD_TOKENS.VLAD,
+  ROBINHOOD_TOKENS.AEON,
 ] as const satisfies readonly RobinhoodToken[];
 
 /**
@@ -206,21 +248,30 @@ export const ROBINHOOD_FRONTEND_DEFAULT_TOKENS = [
   },
   ROBINHOOD_TOKENS.WETH,
   ROBINHOOD_TOKENS.USDG,
+  ROBINHOOD_TOKENS.VIRTUAL,
+  ROBINHOOD_TOKENS.CASHCAT,
+  ROBINHOOD_TOKENS.INDEX,
 ] as const satisfies readonly RobinhoodToken[];
 
 /**
  * Production trusted-hop addresses, ordered by routing usefulness.
  *
- * The 2026-07-11 audit enumerated every pool creation from the Robinhood
- * Uniswap V2/V3 factories, then required multiple meaningful counterparties
- * and a successful zero-tax simulation. Keep this list synchronized with the
- * Robinhood backend routing configuration.
+ * The 2026-07-16 audit combined Dexscreener pool connectivity with Switch tax
+ * simulation, then required multiple meaningful liquidity corridors. VEX is
+ * selectable but excluded because it is taxed; INDEX is excluded because its
+ * dominant liquidity currently depends on unsupported V4 hooks. Keep this
+ * list synchronized with the Robinhood backend and operator bot.
  */
 export const ROBINHOOD_TRUSTED_INTERMEDIATES = [
   ROBINHOOD_TOKENS.WETH.address,
   ROBINHOOD_TOKENS.USDG.address,
   ROBINHOOD_TOKENS.VIRTUAL.address,
   ROBINHOOD_TOKENS.CASHCAT.address,
+  ROBINHOOD_TOKENS.HOODRAT.address,
+  ROBINHOOD_TOKENS.TENDIES.address,
+  ROBINHOOD_TOKENS.JUGGERNAUT.address,
+  ROBINHOOD_TOKENS.MARIAN.address,
+  ROBINHOOD_TOKENS.WALLET.address,
 ] as const;
 
 /** Preferred Robinhood fee tokens, from highest to lowest priority. */

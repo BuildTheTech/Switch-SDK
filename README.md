@@ -123,6 +123,9 @@ For a production integration with tax token handling, adapter filtering, and fee
 Robinhood uses the same quote endpoint; set `network=robinhood`. The dedicated
 module includes canonical chain metadata, deployed Switch contracts, vetted
 routing hubs, and a URL builder that always includes the correct network.
+The production router exposes fourteen adapters across Uniswap, SwapHood,
+Up33, Sheriff, Aeon, Catnip, PancakeSwap, RobinSwap, SushiSwap, and Switch limit
+orders.
 
 For network configuration, deployed addresses, tax handling, execution, and
 the complete frontend token list, see [`ROBINHOOD.md`](ROBINHOOD.md).
@@ -139,7 +142,7 @@ const url = buildRobinhoodQuoteUrl({
   to: ROBINHOOD_TOKENS.USDG.address,
   amount: 1_000_000_000_000_000n,
   sender: walletAddress,
-  slippage: 50,
+  slippage: 100, // 1%, matching the Robinhood frontend default
 });
 
 const response = await fetch(url, {
@@ -921,7 +924,11 @@ Switch Limit Orders let users place **gasless, signed orders** that are filled a
 
 **→ Full integration guide: [`LIMIT-ORDERS.md`](LIMIT-ORDERS.md)**
 
-Covers: creating orders, approvals, `feeOnOutput` decision guide (tax tokens & operator flexibility), querying, cancellation, API reference, types, and EIP-712 details.
+Covers both `pulsechain` and `robinhood`: creating orders, live deployment
+discovery, approvals, `feeOnOutput` decision rules, native PLS/ETH flows,
+querying, cancellation, API types, and EIP-712 details. Use
+`fetchLimitOrderConfig({ network })` at startup and include `network` in every
+orderbook request.
 
 ---
 

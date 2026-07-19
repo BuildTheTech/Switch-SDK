@@ -1,8 +1,17 @@
 # Switch Limit Orders — Integration Guide
 
-> **Gasless EIP-712 signed limit orders on PulseChain**
+> **Gasless EIP-712 signed limit orders on PulseChain and Robinhood Chain**
 
-**Limit Order API:** `https://quote.switch.win` &nbsp;|&nbsp; **Chain:** PulseChain (369)
+**Limit Order API:** `https://quote.switch.win`
+
+| API network | Chain ID | Native currency | Current limit-order contract | Native flow contract |
+|---|---:|---|---|---|
+| `pulsechain` | 369 | PLS | `0x8e3881bdF81Fc0211383B2e576076B654F7aFD86` | `0x88c9e2C83b6B7c707602e548481e58E920694E64` |
+| `robinhood` | 4663 | ETH | `0x752c50DDd3B426cAE3D7A995F313Ac74ac6B0230` | `0x029FfC6aF9112eA078f1D6f4a98826DDB2136cf6` |
+
+Pass `network: "pulsechain"` or `network: "robinhood"` to every SDK API
+helper. Call `fetchLimitOrderConfig({ network })` at startup and treat its
+addresses and EIP-712 domain as the live source of truth.
 
 ---
 
@@ -12,7 +21,7 @@
 1. [Overview](#overview)
 2. [How It Works](#how-it-works)
 3. [Creating a Limit Order](#creating-a-limit-order)
-4. [Native PLS Limit Orders (PLSFlow)](#native-pls-limit-orders-plsflow)
+4. [Native Currency Limit Orders (SwitchPLSFlow)](#native-currency-limit-orders-switchplsflow)
 5. [Choosing `feeOnOutput`](#choosing-feeonoutput)
 6. [Querying Limit Orders](#querying-limit-orders)
 7. [Cancelling a Limit Order](#cancelling-a-limit-order)
@@ -51,9 +60,37 @@ Switch Limit Orders let users place **gasless, signed orders** that are filled a
 - **Nonce-based replay protection** — each order has a unique nonce per maker
 - **Optional expiry** — set a deadline or make the order valid forever
 - **Custom recipient** — output tokens can be sent to a different address
-- **WPLS unwrap** — if the output token is WPLS, it can be auto-unwrapped to native PLS
+- **Native unwrap** — WPLS can be unwrapped to PLS and Robinhood WETH can be
+  unwrapped to ETH by setting `unwrapOutput`
 
 > **⚠️ Important:** The `SWITCH_LIMIT_ORDER` address is the **current** default. The contract may be redeployed (e.g. when the router is upgraded). Each order returned by the API includes a `limitOrderContract` field — **always use the contract address from the order for on-chain interactions (approvals, cancellations), not a hardcoded constant.** This ensures your integration works seamlessly across contract versions without code changes.
+
+### Network-aware setup
+
+```ts
+import {
+  fetchLimitOrderConfig,
+  getLimitOrderApprovalTarget,
+  getNetworkEIP712SigningParams,
+  submitLimitOrder,
+} from "@switch-win/sdk/limit-orders";
+
+// `signer` and a completed `order` are assumed below.
+const network = "robinhood" as const;
+const live = await fetchLimitOrderConfig({ network });
+const { domain, types } = getNetworkEIP712SigningParams(
+  network,
+  live.limitOrderContract,
+);
+const approvalTarget = getLimitOrderApprovalTarget(network, order.feeOnOutput, {
+  limitOrderContract: live.limitOrderContract,
+});
+const signature = await signer.signTypedData(domain, types, order);
+await submitLimitOrder(
+  { ...order, signature, limitOrderContract: live.limitOrderContract },
+  { network },
+);
+```
 
 ---
 
@@ -77,8 +114,8 @@ Switch Limit Orders let users place **gasless, signed orders** that are filled a
 │       Output is sent to the maker (or custom recipient).                │
 │                                                                         │
 │  5. CANCEL (optional)                                                   │
-│       a. invalidateNonce(nonce) on-chain — prevents execution           │
-│       b. DELETE /limit-orders — removes from backend orderbook          │
+│       invalidateNonce(nonce) on-chain — prevents execution              │
+│       The backend indexer observes the cancellation event.              │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -97,7 +134,7 @@ Switch Limit Orders let users place **gasless, signed orders** that are filled a
 > 3. **Retry** on transient failures — the backend is idempotent on `maker + nonce`.
 > 4. Do **not** navigate away or close the signing flow until the backend confirms.
 >
-> *PLSFlow (native PLS) orders are the exception — they are recorded on-chain*
+> *Native PLS/ETH flow orders are the exception — they are recorded on-chain*
 > *first, so the backend discovers them via event indexing even if the POST*
 > *never arrives.*
 
@@ -111,24 +148,26 @@ The full lifecycle in code (ethers.js v6):
 import { ethers } from "ethers";
 import {
   buildLimitOrder,
-  getEIP712SigningParams,
-  getApprovalTarget,
-  getRouterApprovalTarget,
+  fetchLimitOrderConfig,
+  getLimitOrderApprovalTarget,
+  getNetworkEIP712SigningParams,
   submitLimitOrder,
 } from "@switch-win/sdk/limit-orders";
 import { ERC20_ABI } from "@switch-win/sdk/constants";
 
-const provider = new ethers.JsonRpcProvider("https://rpc.pulsechain.com");
+const network = "robinhood" as const;
+const provider = new ethers.JsonRpcProvider("https://rpc.mainnet.chain.robinhood.com");
 const signer = new ethers.Wallet(PRIVATE_KEY, provider);
 const maker = await signer.getAddress();
+const live = await fetchLimitOrderConfig({ network });
 
 // ── Step 1: Build the order ──
 const order = buildLimitOrder({
   maker,
-  tokenIn: "0xA1077a294dDE1B09bB078844df40758a5D0f9a27",   // WPLS
-  tokenOut: "0x95B303987A60C71504D99Aa1b13B4DA07b0790ab",  // PLSX
-  amountIn: ethers.parseUnits("1000", 18).toString(),       // 1000 WPLS
-  minAmountOut: ethers.parseUnits("500000", 18).toString(), // min 500k PLSX
+  tokenIn: "0x0Bd7D308f8E1639FAb988Df18A8011f41EAcAD73",   // WETH
+  tokenOut: "0x5fc5360D0400a0Fd4F2aF552aDD042D716F1d168",  // USDG
+  amountIn: ethers.parseUnits("0.01", 18).toString(),
+  minAmountOut: ethers.parseUnits("30", 18).toString(),
   deadline: Math.floor(Date.now() / 1000) + 86400,          // 24h expiry
   // nonce: auto-generated from Date.now()
   // feeOnOutput: false (default — fee taken from input)
@@ -137,11 +176,11 @@ const order = buildLimitOrder({
 });
 
 // ── Step 2: Approve the correct contract (one-time per token + fee mode) ──
-//   feeOnOutput=false (default) → LO contract pulls tokens → approve SWITCH_LIMIT_ORDER
-//   feeOnOutput=true            → Router pulls tokens       → approve SWITCH_ROUTER
-const approvalTarget = order.feeOnOutput
-  ? getRouterApprovalTarget()   // SwitchRouter
-  : getApprovalTarget();        // SwitchLimitOrder
+//   feeOnOutput=false (default) → approve this network's LO contract
+//   feeOnOutput=true            → approve this network's SwitchRouter
+const approvalTarget = getLimitOrderApprovalTarget(network, order.feeOnOutput, {
+  limitOrderContract: live.limitOrderContract,
+});
 const token = new ethers.Contract(order.tokenIn, ERC20_ABI, signer);
 const allowance: bigint = await token.allowance(maker, approvalTarget);
 
@@ -151,14 +190,20 @@ if (allowance < BigInt(order.amountIn)) {
 }
 
 // ── Step 3: Sign via EIP-712 (gasless!) ──
-const { domain, types } = getEIP712SigningParams();
+const { domain, types } = getNetworkEIP712SigningParams(
+  network,
+  live.limitOrderContract,
+);
 const signature = await signer.signTypedData(domain, types, order);
 
 // ── Step 4: Submit to the Switch backend ──
 // ⚠️ CRITICAL: The signature is off-chain only — if this POST fails,
 // the order is lost. Submit IMMEDIATELY after signing, await the
 // response, and retry on network failure.
-const result = await submitLimitOrder({ ...order, signature });
+const result = await submitLimitOrder(
+  { ...order, signature, limitOrderContract: live.limitOrderContract },
+  { network },
+);
 
 if ("error" in result) {
   // Retry logic recommended here — the backend is idempotent on maker+nonce
@@ -182,52 +227,60 @@ if ("error" in result) {
 | `nonce` | `number` | No | `Date.now()` | Unique per maker. Auto-generated if omitted |
 | `feeOnOutput` | `boolean` | No | `false` | Fee mode — see [Choosing `feeOnOutput`](#choosing-feeonoutput) below |
 | `recipient` | `string` | No | `maker` | Address to receive output tokens |
-| `unwrapOutput` | `boolean` | No | `false` | Unwrap WPLS to native PLS if tokenOut is WPLS |
+| `unwrapOutput` | `boolean` | No | `false` | Unwrap wrapped native output to PLS/ETH on the selected network |
 
 ---
 
-## Native PLS Limit Orders (PLSFlow)
+## Native Currency Limit Orders (SwitchPLSFlow)
 
-When selling **native PLS** (not WPLS), use the **PLSFlow** contract instead of the standard EIP-712 signing flow. This provides a simpler, single-transaction experience:
+When selling native **PLS** on PulseChain or native **ETH** on Robinhood
+(rather than WPLS/WETH), use the selected network's native-flow contract
+instead of the standard EIP-712 signing flow. The deployed contract retains
+the legacy `SwitchPLSFlow` name on both networks, but its behavior is
+native-currency neutral:
 
-- **No approval needed** — users send PLS directly to the contract
+- **No approval needed** — users send the native currency directly to the contract
 - **No EIP-712 signature** — the contract creates the order on-chain immediately
 - **Single transaction** — wrap + approve + place order all in one tx
 - **Fully indexed** — the backend discovers orders via `PLSOrderCreated` events
 
-### PLSFlow Contract Address
+### Native-flow contract address
 
 ```ts
-import { getPLSFlowAddress, PLS_FLOW_ABI } from "@switch-win/sdk";
+import { getNativeFlowAddress, PLS_FLOW_ABI } from "@switch-win/sdk";
 
-const SWITCH_PLS_FLOW = getPLSFlowAddress();
-// "0x88c9e2C83b6B7c707602e548481e58E920694E64"
+const robinhoodNativeFlow = getNativeFlowAddress("robinhood");
+// "0x029FfC6aF9112eA078f1D6f4a98826DDB2136cf6"
 ```
 
-### Creating a Native PLS Limit Order
+### Creating a native ETH limit order on Robinhood
 
 ```ts
 import { ethers } from "ethers";
-import { getPLSFlowAddress, isNativePLS } from "@switch-win/sdk/limit-orders";
-import { PLS_FLOW_ABI, WPLS } from "@switch-win/sdk/constants";
+import { getNativeFlowAddress, isNativeCurrency } from "@switch-win/sdk/limit-orders";
+import { PLS_FLOW_ABI } from "@switch-win/sdk/constants";
 
-const provider = new ethers.JsonRpcProvider("https://rpc.pulsechain.com");
+const network = "robinhood" as const;
+const provider = new ethers.JsonRpcProvider("https://rpc.mainnet.chain.robinhood.com");
 const signer = new ethers.Wallet(PRIVATE_KEY, provider);
 
-// Check if we should use PLSFlow
-const NATIVE_PLS = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
-if (isNativePLS(NATIVE_PLS)) {
-  const plsFlow = new ethers.Contract(getPLSFlowAddress(), PLS_FLOW_ABI, signer);
+const NATIVE = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
+if (isNativeCurrency(NATIVE)) {
+  const nativeFlow = new ethers.Contract(
+    getNativeFlowAddress(network),
+    PLS_FLOW_ABI,
+    signer,
+  );
   
-  const tokenOut = "0x95B303987A60C71504D99Aa1b13B4DA07b0790ab"; // PLSX
-  const amountIn = ethers.parseUnits("1000", 18);                 // 1000 PLS
-  const minAmountOut = ethers.parseUnits("500000", 18);           // min 500k PLSX
+  const tokenOut = "0x5fc5360D0400a0Fd4F2aF552aDD042D716F1d168"; // USDG
+  const amountIn = ethers.parseEther("0.01");
+  const minAmountOut = ethers.parseUnits("30", 18);
   const deadline = Math.floor(Date.now() / 1000) + 86400;         // 24h expiry
   const feeOnOutput = false;
   const unwrapOutput = false;
 
   // Single transaction — no approval, no signing
-  const tx = await plsFlow.createOrder(
+  const tx = await nativeFlow.createOrder(
     tokenOut,
     minAmountOut,
     deadline,
@@ -239,57 +292,65 @@ if (isNativePLS(NATIVE_PLS)) {
   );
   
   const receipt = await tx.wait();
-  console.log("PLS limit order created in tx:", receipt.hash);
+  console.log("Native ETH limit order created in tx:", receipt.hash);
   
   // The backend will automatically detect this order via PLSOrderCreated event.
   // No POST to /limit-orders required (though it's harmless if you do).
 }
 ```
 
-### PLSFlow vs EIP-712 Orders
+### Native flow vs EIP-712 orders
 
-| Aspect | PLSFlow (native PLS) | EIP-712 (ERC-20) |
+| Aspect | Native flow (PLS/ETH) | EIP-712 (ERC-20) |
 |---|---|---|
-| **Input token** | Native PLS only | Any ERC-20 (including WPLS) |
+| **Input token** | Native currency | Any ERC-20 (including WPLS/WETH) |
 | **User experience** | Single transaction | Approve + Sign + Submit |
 | **Gas cost** | User pays gas | Gasless signing (user pays on fill) |
 | **Order discovery** | On-chain event | Requires successful POST |
-| **Maker address** | PLSFlow contract | User's wallet |
+| **Maker address** | Native-flow contract | User's wallet |
 | **Recipient** | User's wallet (or custom) | User's wallet (or custom) |
 
 ### Important: Order Discovery
 
-For PLSFlow orders, the `maker` field in the order record is the **PLSFlow contract address**, not the user's address. The actual user is stored in the `recipient` field.
+For native-flow orders, the `maker` field in the order record is the
+**native-flow contract address**, not the user's address. The actual user is
+stored in the `recipient` field.
 
 When querying orders for a user, use the `owner` parameter instead of `maker`:
 
 ```ts
-// ✅ Correct — finds both EIP-712 orders AND PLSFlow orders
+// ✅ Correct — finds both EIP-712 and native-flow orders
 const { orders } = await fetchLimitOrders({
+  network: "robinhood",
   owner: "0xUserAddress",  // matches maker OR recipient
   status: "ACTIVE",
 });
 
-// ❌ Won't find PLSFlow orders
+// ❌ Won't find native-flow orders
 const { orders } = await fetchLimitOrders({
+  network: "robinhood",
   maker: "0xUserAddress",  // only matches maker field
   status: "ACTIVE",
 });
 ```
 
-### Cancelling a PLSFlow Order
+### Cancelling a native-flow order
 
-PLSFlow orders can be cancelled by the original creator (the `recipient`):
+Native-flow orders can be cancelled by the original creator (`recipient`):
 
 ```ts
-const plsFlow = new ethers.Contract(getPLSFlowAddress(), PLS_FLOW_ABI, signer);
+const nativeFlow = new ethers.Contract(
+  getNativeFlowAddress("robinhood"),
+  PLS_FLOW_ABI,
+  signer,
+);
 
 // Cancel on-chain (only the original creator can call this)
-const tx = await plsFlow.cancelOrder(nonceToCancel);
+const tx = await nativeFlow.cancelOrder(nonceToCancel);
 await tx.wait();
 
 // The backend will detect the NonceCancelled event and update the order status.
-// You can optionally also call DELETE /limit-orders to remove it immediately.
+// No REST mutation is required.
 ```
 
 ---
@@ -329,7 +390,7 @@ When `feeOnOutput=true`, the Router pulls tokens directly from the maker. If an 
 | **Neither token is taxed** | `false` (default) | Maximum operator flexibility → best chance of fill |
 | **Input token is taxed** | `true` | Router sends tokens directly from maker → pool in one transfer (one tax). Default mode would do maker → LO → pool (two transfers, two taxes). |
 | **Output token is taxed** | `false` (default) | Output goes directly to recipient in one transfer. |
-| **Both tokens taxed** | Not supported | Frontend should block this combination. |
+| **Both tokens taxed** | `false` | Supported through tax-safe V2 routes; fee on input avoids another output-token transfer. |
 
 > **Recommendation:** Use `feeOnOutput: false` (the default) unless the input token has a transfer tax. This gives operators the most flexibility and the best chance of filling your order.
 
@@ -389,18 +450,18 @@ const stats = await fetchLimitOrderStats();
 
 ## Cancelling a Limit Order
 
-Cancellation is a **two-step process** — both steps are important:
+Cancellation is an **on-chain operation**:
 
 1. **On-chain:** Call `invalidateNonce(nonce)` on the **order's** SwitchLimitOrder contract. This is the authoritative cancellation — it prevents any operator from executing the order even if the backend hasn't been notified yet.
 
    > **⚠️** Each order includes a `limitOrderContract` field. Always use that address — do not hardcode a single contract constant, as the contract may be redeployed across versions.
 
-2. **Backend:** Call `DELETE /limit-orders` (or `cancelLimitOrder()`) to remove the order from the active orderbook. This stops operators from even attempting to fill it.
+The backend indexer observes `NonceCancelled` and updates the orderbook. No
+separate REST mutation is required.
 
 ```ts
 import { ethers } from "ethers";
-import { cancelLimitOrder } from "@switch-win/sdk/limit-orders";
-import { SWITCH_LIMIT_ORDER, LIMIT_ORDER_ABI } from "@switch-win/sdk/constants";
+import { LIMIT_ORDER_ABI } from "@switch-win/sdk/constants";
 
 const signer = new ethers.Wallet(PRIVATE_KEY, provider);
 const maker = await signer.getAddress();
@@ -412,13 +473,7 @@ const contract = new ethers.Contract(order.limitOrderContract, LIMIT_ORDER_ABI, 
 const tx = await contract.invalidateNonce(nonceToCancel);
 await tx.wait();
 
-// Step 2: Notify the backend (removes from orderbook)
-const result = await cancelLimitOrder(maker, nonceToCancel);
-if ("error" in result) {
-  console.log(result.error); // e.g. "Order not found" or "Order already CANCELLED"
-} else {
-  console.log("Cancelled successfully");
-}
+// The backend indexer observes the event and marks the order CANCELLED.
 ```
 
 To cancel **multiple orders** at once, use `invalidateNonces(uint256[])`:
@@ -428,10 +483,7 @@ const nonces = [1717171717, 1717171718, 1717171719];
 const tx = await contract.invalidateNonces(nonces);
 await tx.wait();
 
-// Then cancel each on the backend
-for (const nonce of nonces) {
-  await cancelLimitOrder(maker, nonce);
-}
+// The backend indexer observes each NonceCancelled event.
 ```
 
 ---
@@ -443,7 +495,6 @@ for (const nonce of nonces) {
 | Method | Path | Description |
 |---|---|---|
 | `POST` | `/limit-orders` | Submit a signed limit order |
-| `DELETE` | `/limit-orders` | Cancel an order (by maker + nonce) |
 | `GET` | `/limit-orders` | List orders (with query filters) |
 | `GET` | `/limit-orders/pairs` | Active pairs with order counts |
 | `GET` | `/limit-orders/stats` | Summary statistics |
@@ -463,7 +514,7 @@ Submit a signed limit order. The backend verifies the EIP-712 signature before s
 > 2. **Await** the response and confirm `success: true` before showing "order created".
 > 3. **Retry** on transient failures — the backend is idempotent on `maker + nonce`.
 >
-> PLSFlow (native PLS) orders are the exception — they are recorded on-chain first,
+> Native PLS/ETH flow orders are the exception — they are recorded on-chain first,
 > so the backend discovers them via event indexing even if the POST never arrives.
 
 **Request body:**
@@ -480,6 +531,7 @@ Submit a signed limit order. The backend verifies the EIP-712 signature before s
   "feeOnOutput": false,
   "recipient": "0x...",
   "unwrapOutput": false,
+  "limitOrderContract": "0x...",
   "signature": "0x..."
 }
 ```
@@ -522,21 +574,6 @@ Submit a signed limit order. The backend verifies the EIP-712 signature before s
 | `"Invalid signature"` | EIP-712 signature verification failed |
 | `"Signature does not match maker"` | The recovered signer doesn't match the `maker` field |
 | `"Nonce N already used for maker 0x..."` | This nonce has already been used (filled or submitted) |
-
-### `DELETE /limit-orders`
-
-Cancel an order by marking it `CANCELLED` in the database.
-
-**Request body:**
-
-```json
-{
-  "maker": "0x...",
-  "nonce": 1717171717
-}
-```
-
-**Success response:** `{ "success": true }`
 
 ### `GET /limit-orders`
 
@@ -608,15 +645,13 @@ Summary statistics.
 | `LimitOrderParams` | Order fields for EIP-712 signing |
 | `SignedLimitOrder` | `LimitOrderParams` + `signature` |
 | `CreateLimitOrderRequest` | Alias for `SignedLimitOrder` (POST body) |
-| `CancelLimitOrderRequest` | `{ maker, nonce }` (DELETE body) |
 | `LimitOrderStatus` | `"ACTIVE" \| "FILLED" \| "CANCELLED" \| "EXPIRED"` |
 | `LimitOrderRecord` | Full order record from the API (includes `partnerAddress`, `limitOrderContract`, status, and timestamps) |
 | `CreateLimitOrderResponse` | `{ success: true, order: LimitOrderRecord }` |
-| `CancelLimitOrderResponse` | `{ success: true }` |
 | `ListLimitOrdersResponse` | `{ total, limit, offset, orders: LimitOrderRecord[] }` |
 | `LimitOrderPair` | Active pair with order count |
 | `LimitOrderStats` | Global order statistics |
-| `LimitOrderMutationResponse` | Union of mutation responses + `ErrorResponse` |
+| `LimitOrderMutationResponse` | Submission response + `ErrorResponse` |
 
 ---
 
@@ -628,16 +663,21 @@ Available from `@switch-win/sdk/limit-orders`:
 |---|---|
 | `buildLimitOrder(options)` | Build a `LimitOrderParams` object with sensible defaults |
 | `getEIP712SigningParams()` | Get the `{ domain, types }` for `signTypedData()` |
+| `getNetworkEIP712SigningParams(network, contract?)` | Build the correct PulseChain or Robinhood EIP-712 domain |
+| `getLimitOrderNetworkConfig(network)` | Get static chain, router, LO, wrapped-native, and native-flow defaults |
+| `getLimitOrderApprovalTarget(network, feeOnOutput, overrides?)` | Resolve the correct maker approval target |
 | `getApprovalTarget()` | Get approval target for `feeOnOutput: false` orders → SwitchLimitOrder |
 | `getRouterApprovalTarget()` | Get approval target for `feeOnOutput: true` orders → SwitchRouter |
 | `shouldUnwrapOutput(tokenOut)` | Returns `true` if tokenOut is WPLS (should set `unwrapOutput: true`) |
 | `getPLSFlowAddress()` | Get the SwitchPLSFlow contract address for native PLS limit orders |
+| `getNativeFlowAddress(network)` | Get the native PLS/ETH flow address for either chain |
 | `isNativePLS(tokenIn)` | Returns `true` if tokenIn is native PLS (use PLSFlow instead of EIP-712) |
+| `isNativeCurrency(tokenIn)` | Network-neutral native sentinel check |
 | `submitLimitOrder(signedOrder)` | POST a signed order to the Switch backend |
-| `cancelLimitOrder(maker, nonce)` | DELETE an order from the Switch backend |
 | `fetchLimitOrders(options?)` | GET orders with optional filters |
 | `fetchLimitOrder(maker, nonce)` | GET a single order by maker + nonce |
 | `fetchLimitOrderPairs()` | GET active pairs with order counts |
+| `fetchLimitOrderConfig({ network })` | GET live deployments and EIP-712 domain |
 | `fetchLimitOrderStats()` | GET global order statistics |
 
 ---
@@ -694,4 +734,4 @@ These are exported as `LIMIT_ORDER_EIP712_DOMAIN` and `LIMIT_ORDER_EIP712_TYPES`
 
 *See also: [README.md](README.md) for swap API docs, constants, and general integration info.*
 
-*Last updated: February 2026*
+*Last updated: July 2026*

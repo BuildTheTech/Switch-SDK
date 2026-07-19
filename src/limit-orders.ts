@@ -2,7 +2,8 @@
  * Switch Limit Orders (V2) — Helper Functions
  *
  * Provides a complete toolkit for creating, signing, submitting, querying,
- * and cancelling EIP-712 signed limit orders on PulseChain.
+ * and cancelling EIP-712 signed limit orders on PulseChain and Robinhood
+ * Chain.
  *
  * ## How it works
  *
@@ -10,7 +11,8 @@
  * 2. **Sign** via EIP-712 with your wallet (ethers.js `signTypedData`)
  * 3. **Submit** the signed order to the Switch backend with `submitLimitOrder()`
  * 4. The Switch filler bot monitors active orders and fills them when profitable
- * 5. **Cancel** an order on-chain via `invalidateNonce()` + notify backend with `cancelLimitOrder()`
+ * 5. **Cancel** an order on-chain via `invalidateNonce()`; the backend indexer
+ *    observes the cancellation event
  *
  * @example
  * ```ts
@@ -27,6 +29,7 @@ import type {
   LimitOrderRecord,
   LimitOrderPair,
   LimitOrderStats,
+  LimitOrderConfigResponse,
   LimitOrderStatus,
   ErrorResponse,
 } from "./types.js";
@@ -41,7 +44,14 @@ import {
   SWITCH_ROUTER,
   SWITCH_PLS_FLOW,
   WPLS,
+  NATIVE_PLS,
 } from "./constants.js";
+import {
+  ROBINHOOD_CHAIN,
+  ROBINHOOD_NATIVE_ETH,
+  ROBINHOOD_SWITCH_CONTRACTS,
+  ROBINHOOD_TOKENS,
+} from "./networks/robinhood.js";
 
 // ── Re-export EIP-712 constants for convenience ─────────────────────────────
 
@@ -247,7 +257,7 @@ export function shouldUnwrapOutput(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// PLSFlow (Native PLS Limit Orders)
+// Native-currency flow (SwitchPLSFlow ABI: PLS on PulseChain, ETH on Robinhood)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
@@ -262,8 +272,83 @@ export function getPLSFlowAddress(nativeFlowContract?: string): string {
   return nativeFlowContract || SWITCH_PLS_FLOW;
 }
 
+/** Networks supported by the shared Switch limit-order API. */
+export type LimitOrderNetwork = "pulsechain" | "robinhood";
+
+/** Complete deployment metadata needed to create or fill limit orders. */
+export interface LimitOrderNetworkConfig {
+  network: LimitOrderNetwork;
+  chainId: number;
+  chainName: string;
+  nativeSymbol: "PLS" | "ETH";
+  nativeSentinel: string;
+  wrappedNativeToken: string;
+  routerContract: string;
+  limitOrderContract: string;
+  nativeFlowContract: string;
+}
+
+/** Static defaults. Prefer {@link fetchLimitOrderConfig} at application startup. */
+export const LIMIT_ORDER_NETWORK_CONFIGS: Readonly<
+  Record<LimitOrderNetwork, LimitOrderNetworkConfig>
+> = {
+  pulsechain: {
+    network: "pulsechain",
+    chainId: 369,
+    chainName: "PulseChain",
+    nativeSymbol: "PLS",
+    nativeSentinel: NATIVE_PLS,
+    wrappedNativeToken: WPLS,
+    routerContract: SWITCH_ROUTER,
+    limitOrderContract: SWITCH_LIMIT_ORDER,
+    nativeFlowContract: SWITCH_PLS_FLOW,
+  },
+  robinhood: {
+    network: "robinhood",
+    chainId: ROBINHOOD_CHAIN.id,
+    chainName: ROBINHOOD_CHAIN.name,
+    nativeSymbol: "ETH",
+    nativeSentinel: ROBINHOOD_NATIVE_ETH,
+    wrappedNativeToken: ROBINHOOD_TOKENS.WETH.address,
+    routerContract: ROBINHOOD_SWITCH_CONTRACTS.router,
+    limitOrderContract: ROBINHOOD_SWITCH_CONTRACTS.limitOrder,
+    nativeFlowContract: ROBINHOOD_SWITCH_CONTRACTS.nativeEthFlow,
+  },
+} as const;
+
+/** Return the static deployment defaults for a supported limit-order network. */
+export function getLimitOrderNetworkConfig(
+  network: LimitOrderNetwork = "pulsechain",
+): LimitOrderNetworkConfig {
+  return LIMIT_ORDER_NETWORK_CONFIGS[network];
+}
+
+/** Build the correct EIP-712 signing domain for a supported network. */
+export function getNetworkEIP712SigningParams(
+  network: LimitOrderNetwork,
+  limitOrderContract?: string,
+) {
+  const config = getLimitOrderNetworkConfig(network);
+  return getEIP712SigningParams(
+    limitOrderContract ?? config.limitOrderContract,
+    config.chainId,
+  );
+}
+
+/** Resolve the maker's ERC-20 approval target for the selected fee mode. */
+export function getLimitOrderApprovalTarget(
+  network: LimitOrderNetwork,
+  feeOnOutput: boolean,
+  overrides: { limitOrderContract?: string; routerContract?: string } = {},
+): string {
+  const config = getLimitOrderNetworkConfig(network);
+  return feeOnOutput
+    ? getRouterApprovalTarget(overrides.routerContract ?? config.routerContract)
+    : getApprovalTarget(overrides.limitOrderContract ?? config.limitOrderContract);
+}
+
 export interface LimitOrderNetworkOptions {
-  network?: "pulsechain" | "robinhood";
+  network?: LimitOrderNetwork;
 }
 
 function endpointForNetwork(endpoint: string, network?: string): string {
@@ -285,6 +370,23 @@ function endpointForNetwork(endpoint: string, network?: string): string {
 export function isNativePLS(tokenIn: string): boolean {
   const NATIVE_SENTINEL = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
   return tokenIn.toLowerCase() === NATIVE_SENTINEL.toLowerCase();
+}
+
+/** Network-neutral native-currency sentinel check (PLS or ETH). */
+export function isNativeCurrency(tokenIn: string): boolean {
+  const normalized = tokenIn.toLowerCase();
+  return (
+    normalized === NATIVE_PLS.toLowerCase() ||
+    normalized === ROBINHOOD_NATIVE_ETH.toLowerCase()
+  );
+}
+
+/** Return the native-order flow contract for PulseChain or Robinhood Chain. */
+export function getNativeFlowAddress(
+  network: LimitOrderNetwork,
+  nativeFlowContract?: string,
+): string {
+  return nativeFlowContract ?? getLimitOrderNetworkConfig(network).nativeFlowContract;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -310,7 +412,7 @@ export function isNativePLS(tokenIn: string): boolean {
  * 4. Do **not** navigate away or close the signing flow until the
  *    backend confirms the order.
  *
- * PLSFlow (native PLS) orders are an exception — they are recorded
+ * Native PLS/ETH flow orders are an exception — they are recorded
  * on-chain first, so the backend can discover them via event indexing
  * even if the POST never arrives.
  *
@@ -344,16 +446,17 @@ export async function submitLimitOrder(
 }
 
 /**
- * Cancel a limit order on the Switch backend (marks it CANCELLED in the DB).
+ * Legacy helper for backend deployments that implemented REST cancellation.
  *
- * **Important:** This only removes the order from the backend orderbook. To
- * prevent the order from being filled on-chain, you MUST also call
- * `invalidateNonce(nonce)` on the SwitchLimitOrder contract. See the
- * cancellation guide in the README.
+ * The current hosted Switch API intentionally has no DELETE endpoint.
+ * Cancellation must be performed on-chain with `invalidateNonce(nonce)` on
+ * the contract stored in the order's `limitOrderContract` field. The indexer
+ * then updates the order status from the emitted event.
  *
  * @param maker - Maker address
  * @param nonce - Nonce of the order to cancel
- * @returns Success confirmation or error
+ * @returns Success confirmation or error on compatible legacy backends
+ * @deprecated Do not use with the hosted Switch API; cancel on-chain instead.
  */
 export async function cancelLimitOrder(
   maker: string,
@@ -372,7 +475,7 @@ export async function cancelLimitOrder(
 /** Filter options for listing limit orders */
 export interface ListLimitOrdersOptions {
   /** Backend network process to query. */
-  network?: "pulsechain" | "robinhood";
+  network?: LimitOrderNetwork;
   /** Filter by order status. Default: `"ACTIVE"` */
   status?: LimitOrderStatus;
   /** Filter by maker address */
@@ -476,6 +579,19 @@ export async function fetchLimitOrderPairs(
 ): Promise<LimitOrderPair[]> {
   const res = await fetch(endpointForNetwork(LIMIT_ORDER_PAIRS_ENDPOINT, options.network));
   return res.json() as Promise<LimitOrderPair[]>;
+}
+
+/** Fetch the active deployment and EIP-712 domain for a network. */
+export async function fetchLimitOrderConfig(
+  options: LimitOrderNetworkOptions = {},
+): Promise<LimitOrderConfigResponse> {
+  const res = await fetch(
+    endpointForNetwork(`${LIMIT_ORDERS_ENDPOINT}/config`, options.network),
+  );
+  if (!res.ok) {
+    throw new Error(`Failed to fetch limit-order config (${res.status})`);
+  }
+  return res.json() as Promise<LimitOrderConfigResponse>;
 }
 
 /**

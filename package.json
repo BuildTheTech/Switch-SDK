@@ -1,6 +1,6 @@
 {
   "name": "@switch-win/sdk",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "Official integration kit for the Switch DEX Aggregator on PulseChain and Robinhood Chain",
   "author": "BuildTheTech",
   "license": "MIT",
@@ -37,7 +37,8 @@
     "src/",
     "abi/",
     "README.md",
-    "ROBINHOOD.md"
+    "ROBINHOOD.md",
+    "LIMIT-ORDERS.md"
   ],
   "devDependencies": {
     "typescript": "^5.9.3"

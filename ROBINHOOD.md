@@ -11,8 +11,8 @@ Production integration reference for Switch swaps on Robinhood Chain mainnet.
 | Explorer | `https://robinhoodchain.blockscout.com` |
 | Quote API | `https://quote.switch.win/swap/quote` |
 | Tax API | `https://quote.switch.win/swap/checkTax` |
-| Supported liquidity | Uniswap V2, V3, and hookless static-fee V4 |
-| Limit orders | Not currently available |
+| Supported liquidity | 14 adapters: Uniswap V2/V3/V4, Switch limit orders, SwapHood, Up33, Sheriff, Aeon, Catnip, PancakeSwap, RobinSwap, and SushiSwap |
+| Limit orders | Available: EIP-712 ERC-20 orders plus native ETH flow |
 
 ## Contents
 
@@ -111,6 +111,16 @@ await window.ethereum.request({
 | SwitchLimitOrder | `0x752c50DDd3B426cAE3D7A995F313Ac74ac6B0230` |
 | Native ETH flow | `0x029FfC6aF9112eA078f1D6f4a98826DDB2136cf6` |
 | Switch Limit Order adapter (index 3) | `0x412F625072c10e58C619D1e0b3C95cd3d5689871` |
+| SwapHood V2 adapter (index 4) | `0x6D8746f02e52944c13824fA691c6f4186E463354` |
+| SwapHood V3 adapter (index 5) | `0x9645dE0AcB48F0AAefdBEb423F0558457907DE98` |
+| Up33 CL adapter (index 6) | `0x388179D2FB0ABcE9b03068916aF8a3c4dfD023c8` |
+| Sheriff V2 adapter (index 7) | `0xBDB3EB0355981500f58C9bc77c3E61762844A146` |
+| Sheriff Algebra adapter (index 8) | `0xeFE1affb0e2Bb8A9F7d9D30751bAF679996ADA26` |
+| Aeon Algebra adapter (index 9) | `0x20615954FB87360139e7DdDB519359498EbD1904` |
+| Catnip V2 adapter (index 10) | `0x5b2Ca358d56490Dc86224D502522314De7707237` |
+| PancakeSwap V2 adapter (index 11) | `0x3B6e71A59553143937Fef74a7B50AFD24528786E` |
+| RobinSwap V3 adapter (index 12) | `0x798f77D63b46b0E019de206E111e5ea5CC16BEc8` |
+| SushiSwap V3 adapter (index 13) | `0xca3EA0Fd6E31f94c81B6586836790adE638313ED` |
 
 The V4 adapter was created in
 [deployment transaction `0x60d5...34a7`](https://robinhoodchain.blockscout.com/tx/0x60d56466a8162a643a15ecde98322ec05ea23d44d03fbd817df4ddbaef4834a7)
@@ -161,6 +171,26 @@ await signer.signTypedData(
 Submit signed orders to `POST /limit-orders?network=robinhood`. For
 `feeOnOutput=false`, approve `ROBINHOOD_SWITCH_CONTRACTS.limitOrder`; for
 `feeOnOutput=true`, approve `ROBINHOOD_SWITCH_CONTRACTS.router`.
+
+Applications should fetch `/limit-orders/config?network=robinhood` at startup
+instead of relying only on static addresses. The SDK exposes this as:
+
+```ts
+const config = await fetchLimitOrderConfig({ network: "robinhood" });
+const signing = getNetworkEIP712SigningParams(
+  "robinhood",
+  config.limitOrderContract,
+);
+const approvalTarget = getLimitOrderApprovalTarget(
+  "robinhood",
+  order.feeOnOutput,
+  { limitOrderContract: config.limitOrderContract },
+);
+```
+
+Include `limitOrderContract: config.limitOrderContract` with the submitted
+signed order. Every returned order also carries its own deployment address;
+operators must fill and makers must cancel against that per-order address.
 
 Native ETH input orders are created on-chain through
 `ROBINHOOD_SWITCH_CONTRACTS.nativeEthFlow` and are indexed from its events; do
@@ -222,8 +252,9 @@ The canonical Robinhood V4 infrastructure is available through
 | Permit2 | `0x000000000022D473030F116dDEE9F6B43aC78BA3` |
 
 Tax-token safety is unchanged: if either side is detected as a transfer-tax
-token, the complete route is restricted to Uniswap V2 adapter index `0`.
-Uniswap V3 and V4 are both excluded from that quote.
+token, the complete route is restricted to direct-pair V2 adapters `0`, `4`,
+`7`, `10`, and `11`. Concentrated-liquidity adapters are excluded from that
+quote.
 
 ## Swap integration flow
 
@@ -239,8 +270,9 @@ Use the same sequence as a PulseChain integration:
 6. Show `expectedOutputAmount`, `minAmountOut`, route allocation, and detected
    taxes to the user.
 
-Any swap involving a tax token is routed entirely through Uniswap V2. This
-also applies when both input and output are tax tokens.
+Any swap involving a tax token is routed entirely through the tax-safe
+direct-pair V2 adapter set (`0`, `4`, `7`, `10`, and `11`). This also applies
+when both input and output are tax tokens.
 
 ## Quickstart
 
@@ -257,7 +289,7 @@ const url = buildRobinhoodQuoteUrl({
   to: ROBINHOOD_TOKENS.USDG.address,
   amount: 1_000_000_000_000_000n,
   sender: walletAddress,
-  slippage: 50, // 0.50%, expressed in basis points
+  slippage: 100, // 1.00%, the Robinhood frontend default
   feeOnOutput,
 });
 
@@ -281,7 +313,7 @@ Equivalent curl request:
 
 ```bash
 curl -H "x-api-key: YOUR_KEY" \
-  "https://quote.switch.win/swap/quote?network=robinhood&from=0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE&to=0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168&amount=1000000000000000&sender=0xYOUR_WALLET&slippage=50"
+  "https://quote.switch.win/swap/quote?network=robinhood&from=0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE&to=0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168&amount=1000000000000000&sender=0xYOUR_WALLET&slippage=100"
 ```
 
 Omit `sender` for a display-only quote. Fetch again with the sender immediately
@@ -374,7 +406,7 @@ const quoteUrl = buildRobinhoodQuoteUrl({
   to: tokenOut,
   amount: amountIn,
   sender: walletAddress,
-  slippage: 50,
+  slippage: 100,
   feeOnOutput,
 });
 
@@ -444,14 +476,25 @@ Robinhood currently returns:
 | `0` | Uniswap V2 |
 | `1` | Uniswap V3 |
 | `2` | Uniswap V4 |
+| `3` | Switch Limit Orders |
+| `4` | SwapHood V2 |
+| `5` | SwapHood V3 |
+| `6` | Up33 CL |
+| `7` | Sheriff V2 |
+| `8` | Sheriff Algebra |
+| `9` | Aeon Algebra |
+| `10` | Catnip V2 |
+| `11` | PancakeSwap V2 |
+| `12` | RobinSwap V3 |
+| `13` | SushiSwap V3 |
 
 Treat the endpoint response, not this document, as the source of truth for
 which adapters are currently selectable.
 
 Do not permanently hard-code the available adapter list in an integration.
 Fetch it when presenting routing-source controls. If a quote involves a tax
-token, the backend overrides routing to tax-safe adapter `0`; an explicit
-filter that excludes adapter `0` is rejected.
+token, the backend restricts routing to tax-safe adapters `0`, `4`, `7`, `10`,
+and `11`; an explicit filter that excludes all of them is rejected.
 
 ### Check token tax
 
@@ -487,7 +530,7 @@ GET https://quote.switch.win/swap/quote
 | `amount` | Yes | Raw input amount. |
 | `sender` | No | Required when transaction calldata is needed. |
 | `receiver` | No | Output recipient; defaults to `sender`. |
-| `slippage` | No | Basis points; default `50` (`0.5%`). |
+| `slippage` | No | Basis points; API fallback `50` (`0.5%`). The Switch Robinhood frontend explicitly requests `100` (`1%`). |
 | `fee` | No | Partner/protocol fee in basis points. |
 | `partnerAddress` | No | Fee-sharing recipient. |
 | `feeOnOutput` | No | `true` takes the fee from output; `false` takes it from input. |
@@ -529,7 +572,7 @@ Common Robinhood errors include:
 - Missing or unsupported `network`.
 - Invalid token, sender, receiver, or partner address.
 - Invalid raw amount, slippage, fee, gas price, or adapter filter.
-- A tax-token quote explicitly excluded the Uniswap V2 adapter.
+- A tax-token quote explicitly excluded every tax-safe direct-pair V2 adapter.
 - No viable route across the currently active adapters, or insufficient liquidity.
 - RPC timeout or public-RPC rate limiting.
 - Missing executable transaction because `sender` was omitted.
@@ -577,6 +620,12 @@ into the UI separately from this list.
 | GME | GameStop | `0x7e86381A763F0Ecca2bDF27C54eAC403ddD48123` | 18 |
 | 4663 | 4663 | `0xd4052415613B34Af236024B895574c467f65b6dD` | 18 |
 | MARIAN | Lady Marian | `0x01637b14B7378B99dE75A64d50656d98488D9a4d` | 18 |
+| Index | The Index | `0x56910D4409F3a0C78C64DD8D0545FF0705389870` | 18 |
+| VEX | ProjectVex | `0x8Ff92566f2e81BDd68EDfAa8cde73942A723796b` | 18 |
+| HOODIE | HOODIE | `0xC72c01AAB5f5678dc1d6f5C6d2B417d91D402Ba3` | 18 |
+| WISHBONE | WISHBONE | `0x77581054581B9c525E7dd7a0155DE43867532d03` | 18 |
+| VLAD | The Green Bull | `0x31BE8f7485e36928C9De86566c62da82d4B6BF81` | 18 |
+| AEON | Aeon | `0xd4c93eD1843606f92CccA078941f3d52A585982f` | 18 |
 
 The ordered list is exported as `ROBINHOOD_FRONTEND_TOKEN_LIST`.
 
@@ -586,22 +635,38 @@ Always identify tokens by address and obtain a fresh quote and tax check.
 
 ### Routing configuration
 
-Switch currently evaluates:
+The production router currently exposes fourteen ordered adapters:
 
-- Uniswap V2 adapter index `0`.
-- Uniswap V3 adapter index `1`.
-- V3 fee tiers `100`, `500`, `3000`, and `10000`.
-- Trusted routing hubs WETH, USDG, VIRTUAL, and CASHCAT.
+| Index | Venue | Routing family |
+|---:|---|---|
+| `0` | Uniswap V2 | Direct-pair V2 |
+| `1` | Uniswap V3 | V3 tiers `100`, `500`, `3000`, `10000` |
+| `2` | Uniswap V4 | Complete hookless static-fee `PoolKey` |
+| `3` | Switch limit orders | Signed/on-chain order liquidity |
+| `4` | SwapHood V2 | Pair-owned variable-fee V2 |
+| `5` | SwapHood V3 | Pancake V3 tiers `100`, `500`, `2500`, `10000` |
+| `6` | Up33 | Slipstream CL tick spacings `1`, `10`, `50`, `60`, `100`, `200`, `2000` |
+| `7` | Sheriff V2 | Pair-owned variable-fee V2 |
+| `8` | Sheriff | Algebra Integral |
+| `9` | Aeon | Algebra Integral with plugin-aware fees |
+| `10` | Catnip | Direct-pair V2, fixed 30 bps |
+| `11` | PancakeSwap | Direct-pair V2, fixed 25 bps |
+| `12` | RobinSwap | V3 tiers `100`, `500`, `2500`, `3000`, `10000` |
+| `13` | SushiSwap | V3 tiers `500`, `3000`, `10000` |
 
-The prepared V4 integration reserves adapter index `2`. Once activated, it
-discovers hookless static-fee V4 pools by complete `PoolKey` rather than
-applying the V3 fee-tier list. Native-ETH V4 currencies are normalized through the WETH/native
-alias described above. Until `/swap/adapters` returns index `2`, V4 is not part
-of live production quotes.
+V4 pools are discovered by complete `PoolKey`, not by applying a V3 fee-tier
+list. Native-ETH V4 currencies are normalized through the WETH/native alias
+described above. V3-style and Up33 route legs preserve the exact fee tier or
+tick spacing that won the quote for every direct and multi-hop allocation.
 
-If either side is detected as a transfer-tax token, the backend restricts the
-entire route (including every split and intermediate hop) to Uniswap V2. V3 is
-not considered for that quote, and V4 will remain excluded after activation.
+Trusted routing hubs are WETH, USDG, VIRTUAL, CASHCAT, HOODRAT, TENDIES,
+JUGGERNAUT, MARIAN, and WALLET. The expanded set was selected from the
+2026-07-16 pair-connectivity audit and zero-tax checks. VEX is excluded because
+it is taxed; INDEX remains an endpoint token but is excluded because its
+dominant liquidity depends on V4 hooks that are not yet supported. If either side is
+detected as a transfer-tax token, the backend restricts the entire route to
+direct-pair V2 adapters `0`, `4`, `7`, `10`, and `11`; concentrated-liquidity
+and limit-order adapters are excluded.
 
 The API may split a quote across routes and adapters. Integrators should render
 the returned `paths` or `routeAllocation` instead of assuming a single path.
@@ -618,14 +683,13 @@ untrusted clients.
 
 ## Current limitations
 
-- Robinhood limit orders are not deployed.
-- Rialto DEX is not integrated.
-- The production router supports Uniswap V2, V3, and supported hookless
-  static-fee V4 liquidity. V4 participates in quotes whenever adapter index
-  `2` is advertised by `/swap/adapters`.
+- Rialto liquidity is not integrated.
+- Robinhood market routing is limited to the fourteen production adapters
+  listed above. Always use `/swap/adapters` as the runtime source of truth.
 - The first V4 phase intentionally excludes hooked and dynamic-fee pools.
 - A V4 allocation currently selects its best single PoolKey; intra-V4
-  multi-pool splitting is not yet enabled. V4 can still split against V2/V3.
+  multi-pool splitting is not yet enabled. V4 can still split against other
+  eligible adapters.
 - Contract and token addresses must be treated as chain-specific.
 
 See the main [SDK reference](README.md) for authentication, partner fees,

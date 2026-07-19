@@ -315,6 +315,12 @@ export interface LimitOrderParams {
 export interface SignedLimitOrder extends LimitOrderParams {
   /** EIP-712 signature of the order struct, produced by the maker's wallet */
   signature: string;
+  /**
+   * SwitchLimitOrder deployment used in the EIP-712 domain.
+   * Include this when submitting Robinhood orders or orders signed against an
+   * older supported deployment so the backend verifies the correct domain.
+   */
+  limitOrderContract?: string;
 }
 
 // -- API request/response types --
@@ -322,7 +328,7 @@ export interface SignedLimitOrder extends LimitOrderParams {
 /** Body for `POST /limit-orders` */
 export type CreateLimitOrderRequest = SignedLimitOrder;
 
-/** Body for `DELETE /limit-orders` */
+/** @deprecated Current hosted API cancellation is on-chain only. */
 export interface CancelLimitOrderRequest {
   /** Maker address */
   maker: string;
@@ -359,7 +365,7 @@ export interface LimitOrderRecord {
   nonce: number;
   /** Fee mode flag */
   feeOnOutput: boolean;
-  /** Unwrap output to native PLS flag */
+  /** Unwrap wrapped-native output to PLS/ETH on the selected network */
   unwrapOutput: boolean;
   /** Partner address for fee sharing */
   partnerAddress: string;
@@ -399,7 +405,7 @@ export interface CreateLimitOrderResponse {
   order: LimitOrderRecord;
 }
 
-/** Response from `DELETE /limit-orders` (success) */
+/** @deprecated Current hosted API cancellation is on-chain only. */
 export interface CancelLimitOrderResponse {
   success: true;
 }
@@ -435,6 +441,22 @@ export interface LimitOrderStats {
   cancelled: number;
   expired: number;
   total: number;
+}
+
+/** Response from `GET /limit-orders/config`. */
+export interface LimitOrderConfigResponse {
+  limitOrderContract: string;
+  allLimitOrderContracts: string[];
+  plsFlowContract: string | null;
+  allPlsFlowContracts: string[];
+  limitOrderContractVersions: Record<string, string>;
+  plsFlowContractVersions: Record<string, string>;
+  eip712Domain: {
+    name: "SwitchLimitOrder";
+    version: "2";
+    chainId: number;
+    verifyingContract: string;
+  };
 }
 
 /** Union type for limit order mutation responses */
