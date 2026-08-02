@@ -25,14 +25,169 @@ export const ROBINHOOD_SWITCH_CONTRACTS = {
   /** ERC-20 approval target. Use quote.tx.to when submitting a swap. */
   router: "0x8730C3e2cF2c8CDa8E6166837A1Ed26f46aa9E59",
   routerView: "0xFF6b56d3F444eB5b7FA1db047F57140C84810376",
+  limitOrder: "0x752c50DDd3B426cAE3D7A995F313Ac74ac6B0230",
+  nativeEthFlow: "0x029FfC6aF9112eA078f1D6f4a98826DDB2136cf6",
   uniswapV2Adapter: "0x7a14d7A8509a66209D4332843b983b29bF5604A4",
   uniswapV3Adapter: "0xbcA08f296d9Ba0dc19Aa0E05D355365cE29A3205",
   uniswapV4Adapter: "0x754dDCD05aFbAd1cc7Bc42B9268EB586F579E7F6",
-  limitOrder: "0x752c50DDd3B426cAE3D7A995F313Ac74ac6B0230",
-  nativeEthFlow: "0x029FfC6aF9112eA078f1D6f4a98826DDB2136cf6",
   limitOrderAdapter: "0x412F625072c10e58C619D1e0b3C95cd3d5689871",
+  swapHoodV2Adapter: "0x6D8746f02e52944c13824fA691c6f4186E463354",
+  swapHoodV3Adapter: "0x9645dE0AcB48F0AAefdBEb423F0558457907DE98",
+  up33Adapter: "0x388179D2FB0ABcE9b03068916aF8a3c4dfD023c8",
+  sheriffV2Adapter: "0xBDB3EB0355981500f58C9bc77c3E61762844A146",
+  sheriffAlgebraAdapter: "0xaC4da986100724983042Ec28c28db243E2f828CB",
+  aeonAlgebraAdapter: "0x20615954FB87360139e7DdDB519359498EbD1904",
+  catnipV2Adapter: "0x5b2Ca358d56490Dc86224D502522314De7707237",
+  pancakeSwapV2Adapter: "0x3B6e71A59553143937Fef74a7B50AFD24528786E",
+  robinSwapV3Adapter: "0x798f77D63b46b0E019de206E111e5ea5CC16BEc8",
+  sushiSwapV3Adapter: "0xca3EA0Fd6E31f94c81B6586836790adE638313ED",
+  gigaV2Adapter: "0xa379c7D17F7fEe735773879D4069886B117AB54a",
+  gigaV3Adapter: "0xcAa612CDe3d3FbE97Be97eB5f79BC91597432d55",
+  flapAdapter: "0x6af2A4475C44d5833575150Bf7C3D3FE6Bf4F344",
+  ramsesV3Adapter: "0xdBf182774C60932c6fe1Bf3FFaB8Ca28CCb0dC17",
+  ramsesV2Adapter: "0x5fe3b873c222e76f7630b40052f07ee06196E6d3",
   limitOrderAdapterIndex: 3,
 } as const;
+
+export interface RobinhoodAdapter {
+  readonly index: number;
+  readonly name: string;
+  readonly address: string;
+  /** Whether the backend may use this adapter for transfer-tax routes. */
+  readonly taxSafe: boolean;
+}
+
+/**
+ * Snapshot of the ordered production adapter registry verified on 2026-08-02.
+ *
+ * Adapter registration can change. Fetch
+ * `GET /swap/adapters?network=robinhood` when runtime freshness matters.
+ */
+export const ROBINHOOD_ADAPTERS = [
+  {
+    index: 0,
+    name: "UniswapV2",
+    address: ROBINHOOD_SWITCH_CONTRACTS.uniswapV2Adapter,
+    taxSafe: true,
+  },
+  {
+    index: 1,
+    name: "UniswapV3",
+    address: ROBINHOOD_SWITCH_CONTRACTS.uniswapV3Adapter,
+    taxSafe: false,
+  },
+  {
+    index: 2,
+    name: "UniswapV4",
+    address: ROBINHOOD_SWITCH_CONTRACTS.uniswapV4Adapter,
+    taxSafe: false,
+  },
+  {
+    index: 3,
+    name: "SwitchLimitOrders",
+    address: ROBINHOOD_SWITCH_CONTRACTS.limitOrderAdapter,
+    taxSafe: false,
+  },
+  {
+    index: 4,
+    name: "SwapHoodV2",
+    address: ROBINHOOD_SWITCH_CONTRACTS.swapHoodV2Adapter,
+    taxSafe: true,
+  },
+  {
+    index: 5,
+    name: "SwapHoodV3",
+    address: ROBINHOOD_SWITCH_CONTRACTS.swapHoodV3Adapter,
+    taxSafe: false,
+  },
+  {
+    index: 6,
+    name: "Up33",
+    address: ROBINHOOD_SWITCH_CONTRACTS.up33Adapter,
+    taxSafe: false,
+  },
+  {
+    index: 7,
+    name: "SheriffV2",
+    address: ROBINHOOD_SWITCH_CONTRACTS.sheriffV2Adapter,
+    taxSafe: true,
+  },
+  {
+    index: 8,
+    name: "SheriffAlgebra",
+    address: ROBINHOOD_SWITCH_CONTRACTS.sheriffAlgebraAdapter,
+    taxSafe: false,
+  },
+  {
+    index: 9,
+    name: "AeonAlgebra",
+    address: ROBINHOOD_SWITCH_CONTRACTS.aeonAlgebraAdapter,
+    taxSafe: false,
+  },
+  {
+    index: 10,
+    name: "CatnipV2",
+    address: ROBINHOOD_SWITCH_CONTRACTS.catnipV2Adapter,
+    taxSafe: true,
+  },
+  {
+    index: 11,
+    name: "PancakeSwapV2",
+    address: ROBINHOOD_SWITCH_CONTRACTS.pancakeSwapV2Adapter,
+    taxSafe: true,
+  },
+  {
+    index: 12,
+    name: "RobinSwapV3",
+    address: ROBINHOOD_SWITCH_CONTRACTS.robinSwapV3Adapter,
+    taxSafe: false,
+  },
+  {
+    index: 13,
+    name: "SushiSwapV3",
+    address: ROBINHOOD_SWITCH_CONTRACTS.sushiSwapV3Adapter,
+    taxSafe: false,
+  },
+  {
+    index: 14,
+    name: "GigaV2",
+    address: ROBINHOOD_SWITCH_CONTRACTS.gigaV2Adapter,
+    taxSafe: true,
+  },
+  {
+    index: 15,
+    name: "GigaV3",
+    address: ROBINHOOD_SWITCH_CONTRACTS.gigaV3Adapter,
+    taxSafe: false,
+  },
+  {
+    index: 16,
+    name: "Flap",
+    address: ROBINHOOD_SWITCH_CONTRACTS.flapAdapter,
+    taxSafe: true,
+  },
+  {
+    index: 17,
+    name: "RamsesV3",
+    address: ROBINHOOD_SWITCH_CONTRACTS.ramsesV3Adapter,
+    taxSafe: false,
+  },
+  {
+    index: 18,
+    name: "RamsesV2",
+    address: ROBINHOOD_SWITCH_CONTRACTS.ramsesV2Adapter,
+    taxSafe: true,
+  },
+] as const satisfies readonly RobinhoodAdapter[];
+
+/** Adapter indices currently eligible for Robinhood transfer-tax routes. */
+export const ROBINHOOD_TAX_SAFE_ADAPTER_INDICES = [
+  0, 4, 7, 10, 11, 14, 16, 18,
+] as const;
+
+/** Current Robinhood transfer-tax-safe adapter metadata. */
+export const ROBINHOOD_TAX_SAFE_ADAPTERS: readonly RobinhoodAdapter[] =
+  ROBINHOOD_ADAPTERS.filter((adapter) => adapter.taxSafe);
 
 /** EIP-712 domain used for Robinhood ERC-20 limit-order signatures. */
 export const ROBINHOOD_LIMIT_ORDER_EIP712_DOMAIN = {

@@ -26,8 +26,9 @@ export interface BestPathResponse {
   /** Total input amount in wei */
   totalAmountIn: string;
   /**
-   * Raw DEX output in wei -- reflects price impact only.
-   * This is the amount the pools would return before any taxes, fees, or slippage are applied.
+   * Quoted route output in wei before the Switch protocol fee and slippage.
+   * Adapter-native quotes may already include token-tax effects (for example,
+   * the Flap Portal quote).
    */
   totalAmountOut: string;
   /**
@@ -42,15 +43,14 @@ export interface BestPathResponse {
   /**
    * Minimum acceptable output after taxes, fee, and slippage.
    *
-   * Calculated as:
-   * `totalAmountOut -- (1 -- sellTax) -- (1 -- fee) -- (1 -- buyTax) -- (1 -- slippage)`
-   *
-   * This is the value encoded in the `tx` calldata as `_minTotalAmountOut`.
+   * Tax accounting is adapter-specific. Use this API value directly rather
+   * than recomputing it from the reported tax rates. This is encoded in the
+   * `tx` calldata as `_minTotalAmountOut`.
    */
   minAmountOut: string;
   /** Human-readable path descriptions */
   paths: SwapPath[];
-  /** Structured route breakdown (matches on-chain structs) */
+  /** Human-readable structured route breakdown for display and analytics. */
   routeAllocation?: RouteAllocationPlan;
   /** Ready-to-send transaction with fee on **input** (default). Only present when `sender` query param is provided. */
   tx?: SwapTransaction;
@@ -159,7 +159,7 @@ export interface SwapPathLeg {
   percentage?: number;
 }
 
-// -- Route allocation (matches on-chain structs) --
+// -- Human-readable route allocation --
 
 /** Top-level route allocation plan */
 export interface RouteAllocationPlan {
@@ -193,12 +193,14 @@ export interface HopAllocationPlan {
 
 /** A single adapter leg within a hop */
 export interface HopAdapterAllocationPlan {
-  /** DEX adapter contract address */
+  /** Human-readable DEX adapter name */
   adapter: string;
   /** Input amount routed through this adapter (wei) */
   amountIn: string;
   /** Expected output from this adapter (wei) */
   amountOut: string;
+  /** V3 fee tier or concentrated-liquidity tick-spacing hint. Zero for adapters that do not use it. */
+  fee?: number;
 }
 
 // -- Error response --

@@ -132,6 +132,9 @@ export {
   ROBINHOOD_NATIVE_ETH,
   ROBINHOOD_LIMIT_ORDER_EIP712_DOMAIN,
   ROBINHOOD_SWITCH_CONTRACTS,
+  ROBINHOOD_ADAPTERS,
+  ROBINHOOD_TAX_SAFE_ADAPTER_INDICES,
+  ROBINHOOD_TAX_SAFE_ADAPTERS,
   ROBINHOOD_UNISWAP_CONTRACTS,
   ROBINHOOD_TOKENS,
   ROBINHOOD_FRONTEND_TOKEN_LIST,
@@ -143,6 +146,7 @@ export {
 } from "./networks/robinhood.js";
 
 export type {
+  RobinhoodAdapter,
   RobinhoodToken,
   RobinhoodQuoteParams,
   RobinhoodTaxInfo,

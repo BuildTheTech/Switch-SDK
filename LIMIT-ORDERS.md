@@ -390,7 +390,7 @@ When `feeOnOutput=true`, the Router pulls tokens directly from the maker. If an 
 | **Neither token is taxed** | `false` (default) | Maximum operator flexibility → best chance of fill |
 | **Input token is taxed** | `true` | Router sends tokens directly from maker → pool in one transfer (one tax). Default mode would do maker → LO → pool (two transfers, two taxes). |
 | **Output token is taxed** | `false` (default) | Output goes directly to recipient in one transfer. |
-| **Both tokens taxed** | `false` | Supported through tax-safe V2 routes; fee on input avoids another output-token transfer. |
+| **Both tokens taxed** | `false` | Supported through tax-safe routes; fee on input avoids another output-token transfer. |
 
 > **Recommendation:** Use `feeOnOutput: false` (the default) unless the input token has a transfer tax. This gives operators the most flexibility and the best chance of filling your order.
 

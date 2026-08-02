@@ -11,7 +11,7 @@ Production integration reference for Switch swaps on Robinhood Chain mainnet.
 | Explorer | `https://robinhoodchain.blockscout.com` |
 | Quote API | `https://quote.switch.win/swap/quote` |
 | Tax API | `https://quote.switch.win/swap/checkTax` |
-| Supported liquidity | 14 adapters: Uniswap V2/V3/V4, Switch limit orders, SwapHood, Up33, Sheriff, Aeon, Catnip, PancakeSwap, RobinSwap, and SushiSwap |
+| Supported liquidity | 19 adapters: Uniswap V2/V3/V4, Switch limit orders, SwapHood, Up33, Sheriff, Aeon, Catnip, PancakeSwap, RobinSwap, SushiSwap, GIGA, Flap, and Ramses |
 | Limit orders | Available: EIP-712 ERC-20 orders plus native ETH flow |
 
 ## Contents
@@ -115,12 +115,17 @@ await window.ethereum.request({
 | SwapHood V3 adapter (index 5) | `0x9645dE0AcB48F0AAefdBEb423F0558457907DE98` |
 | Up33 CL adapter (index 6) | `0x388179D2FB0ABcE9b03068916aF8a3c4dfD023c8` |
 | Sheriff V2 adapter (index 7) | `0xBDB3EB0355981500f58C9bc77c3E61762844A146` |
-| Sheriff Algebra adapter (index 8) | `0xeFE1affb0e2Bb8A9F7d9D30751bAF679996ADA26` |
+| Sheriff Algebra adapter (index 8) | `0xaC4da986100724983042Ec28c28db243E2f828CB` |
 | Aeon Algebra adapter (index 9) | `0x20615954FB87360139e7DdDB519359498EbD1904` |
 | Catnip V2 adapter (index 10) | `0x5b2Ca358d56490Dc86224D502522314De7707237` |
 | PancakeSwap V2 adapter (index 11) | `0x3B6e71A59553143937Fef74a7B50AFD24528786E` |
 | RobinSwap V3 adapter (index 12) | `0x798f77D63b46b0E019de206E111e5ea5CC16BEc8` |
 | SushiSwap V3 adapter (index 13) | `0xca3EA0Fd6E31f94c81B6586836790adE638313ED` |
+| GIGA V2 adapter (index 14) | `0xa379c7D17F7fEe735773879D4069886B117AB54a` |
+| GIGA V3 adapter (index 15) | `0xcAa612CDe3d3FbE97Be97eB5f79BC91597432d55` |
+| Flap Portal adapter (index 16) | `0x6af2A4475C44d5833575150Bf7C3D3FE6Bf4F344` |
+| Ramses V3 adapter (index 17) | `0xdBf182774C60932c6fe1Bf3FFaB8Ca28CCb0dC17` |
+| Ramses V2 adapter (index 18) | `0x5fe3b873c222e76f7630b40052f07ee06196E6d3` |
 
 The V4 adapter was created in
 [deployment transaction `0x60d5...34a7`](https://robinhoodchain.blockscout.com/tx/0x60d56466a8162a643a15ecde98322ec05ea23d44d03fbd817df4ddbaef4834a7)
@@ -251,10 +256,11 @@ The canonical Robinhood V4 infrastructure is available through
 | Universal Router | `0x8876789976decbfcbbbe364623c63652db8c0904` |
 | Permit2 | `0x000000000022D473030F116dDEE9F6B43aC78BA3` |
 
-Tax-token safety is unchanged: if either side is detected as a transfer-tax
-token, the complete route is restricted to direct-pair V2 adapters `0`, `4`,
-`7`, `10`, and `11`. Concentrated-liquidity adapters are excluded from that
-quote.
+If either side is detected as a transfer-tax token, the complete route is
+restricted to tax-safe adapters `0`, `4`, `7`, `10`, `11`, `14`, `16`, and
+`18`. Indices `14` and `18` use direct-pair V2 execution. Flap at index `16`
+must execute through its Portal, whose quote already includes Flap token taxes
+in both directions; clients must not apply those taxes a second time.
 
 ## Swap integration flow
 
@@ -270,9 +276,11 @@ Use the same sequence as a PulseChain integration:
 6. Show `expectedOutputAmount`, `minAmountOut`, route allocation, and detected
    taxes to the user.
 
-Any swap involving a tax token is routed entirely through the tax-safe
-direct-pair V2 adapter set (`0`, `4`, `7`, `10`, and `11`). This also applies
-when both input and output are tax tokens.
+Any swap involving a tax token is routed entirely through the tax-safe adapter
+set (`0`, `4`, `7`, `10`, `11`, `14`, `16`, and `18`). This also applies when
+both input and output are tax tokens. Direct-pair adapters receive the
+post-transfer amount; Flap is quoted separately with its full adapter input
+because Portal quoting already models the taxable transfer.
 
 ## Quickstart
 
@@ -487,6 +495,11 @@ Robinhood currently returns:
 | `11` | PancakeSwap V2 |
 | `12` | RobinSwap V3 |
 | `13` | SushiSwap V3 |
+| `14` | GIGA V2 |
+| `15` | GIGA V3 |
+| `16` | Flap |
+| `17` | Ramses V3 |
+| `18` | Ramses V2 |
 
 Treat the endpoint response, not this document, as the source of truth for
 which adapters are currently selectable.
@@ -494,7 +507,8 @@ which adapters are currently selectable.
 Do not permanently hard-code the available adapter list in an integration.
 Fetch it when presenting routing-source controls. If a quote involves a tax
 token, the backend restricts routing to tax-safe adapters `0`, `4`, `7`, `10`,
-and `11`; an explicit filter that excludes all of them is rejected.
+`11`, `14`, `16`, and `18`; an explicit filter that excludes all of them is
+rejected.
 
 ### Check token tax
 
@@ -548,11 +562,11 @@ Important response fields:
 |---|---|
 | `fromToken`, `toToken` | Normalized pair addresses. |
 | `totalAmountIn` | Gross input amount. |
-| `totalAmountOut` | Raw pool output before taxes and Switch fees. |
+| `totalAmountOut` | Quoted route output before the Switch fee and slippage. Adapter-native quotes such as Flap Portal may already include token tax. |
 | `expectedOutputAmount` | Expected user receipt after tax and fee, before slippage. |
-| `minAmountOut` | Minimum output encoded into calldata. |
+| `minAmountOut` | Minimum output after adapter-specific tax accounting, fee, and slippage; use it directly. |
 | `paths` | Human-readable route descriptions. |
-| `routeAllocation` | Structured split, hop, adapter, and pool-specific route allocation. V4 PoolKey data is encoded in the executable transaction and must not be reconstructed client-side. |
+| `routeAllocation` | Human-readable split, hop, and adapter allocation. Adapter payloads such as V4 PoolKey data are encoded in the executable transaction and must not be reconstructed from this display object. |
 | `fromTokenTax`, `toTokenTax` | Detected tax metadata. |
 | `effectiveSlippageBps` | Slippage plus applicable tax buffers. |
 | `tx` | Fee-on-input transaction; present when `sender` is supplied. |
@@ -635,7 +649,7 @@ Always identify tokens by address and obtain a fresh quote and tax check.
 
 ### Routing configuration
 
-The production router currently exposes fourteen ordered adapters:
+The production router currently exposes nineteen ordered adapters:
 
 | Index | Venue | Routing family |
 |---:|---|---|
@@ -653,6 +667,11 @@ The production router currently exposes fourteen ordered adapters:
 | `11` | PancakeSwap | Direct-pair V2, fixed 25 bps |
 | `12` | RobinSwap | V3 tiers `100`, `500`, `2500`, `3000`, `10000` |
 | `13` | SushiSwap | V3 tiers `500`, `3000`, `10000` |
+| `14` | GIGA V2 | Direct-pair V2 using the pair's live quote and pair-owned fee |
+| `15` | GIGA V3 | V3 tiers `100`, `500`, `1000`, `2000`, `3000`, `10000` |
+| `16` | Flap | Portal-executed bonding curve; Portal quote includes token tax |
+| `17` | Ramses V3 | Tick spacings `1`, `5`, `10`, `50`, `100`, `200`, stored in the route `fee` field |
+| `18` | Ramses V2 | Direct-pair, pair-owned variable-fee V2 |
 
 V4 pools are discovered by complete `PoolKey`, not by applying a V3 fee-tier
 list. Native-ETH V4 currencies are normalized through the WETH/native alias
@@ -665,8 +684,10 @@ JUGGERNAUT, MARIAN, and WALLET. The expanded set was selected from the
 it is taxed; INDEX remains an endpoint token but is excluded because its
 dominant liquidity depends on V4 hooks that are not yet supported. If either side is
 detected as a transfer-tax token, the backend restricts the entire route to
-direct-pair V2 adapters `0`, `4`, `7`, `10`, and `11`; concentrated-liquidity
-and limit-order adapters are excluded.
+tax-safe adapters `0`, `4`, `7`, `10`, `11`, `14`, `16`, and `18`;
+concentrated-liquidity and limit-order adapters are excluded. Flap is the one
+non-direct-pair member: only its Portal can execute the curve swap, and the
+Portal quote already includes the Flap token tax.
 
 The API may split a quote across routes and adapters. Integrators should render
 the returned `paths` or `routeAllocation` instead of assuming a single path.
@@ -684,7 +705,7 @@ untrusted clients.
 ## Current limitations
 
 - Rialto liquidity is not integrated.
-- Robinhood market routing is limited to the fourteen production adapters
+- Robinhood market routing is limited to the nineteen production adapters
   listed above. Always use `/swap/adapters` as the runtime source of truth.
 - The first V4 phase intentionally excludes hooked and dynamic-fee pools.
 - A V4 allocation currently selects its best single PoolKey; intra-V4

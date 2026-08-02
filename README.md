@@ -123,9 +123,10 @@ For a production integration with tax token handling, adapter filtering, and fee
 Robinhood uses the same quote endpoint; set `network=robinhood`. The dedicated
 module includes canonical chain metadata, deployed Switch contracts, vetted
 routing hubs, and a URL builder that always includes the correct network.
-The production router exposes fourteen adapters across Uniswap, SwapHood,
-Up33, Sheriff, Aeon, Catnip, PancakeSwap, RobinSwap, SushiSwap, and Switch limit
-orders.
+The production router exposes nineteen adapters across Uniswap, SwapHood,
+Up33, Sheriff, Aeon, Catnip, PancakeSwap, RobinSwap, SushiSwap, GIGA, Flap,
+Ramses, and Switch limit orders. `ROBINHOOD_ADAPTERS` contains a typed snapshot;
+fetch `/swap/adapters?network=robinhood` when runtime freshness matters.
 
 For network configuration, deployed addresses, tax handling, execution, and
 the complete frontend token list, see [`ROBINHOOD.md`](ROBINHOOD.md).
@@ -687,11 +688,11 @@ GET /swap/quote?network=pulsechain&from=0xA1077a294dDE1B09bB078844df40758a5D0f9a
 | `toToken` | `string` | Output token address |
 | `receiver` | `string?` | Recipient address for output tokens. Same as `sender` unless a custom `receiver` was specified. |
 | `totalAmountIn` | `string` | Total input amount in wei |
-| `totalAmountOut` | `string` | Raw DEX output in wei — reflects price impact only (before taxes, fees, and slippage) |
+| `totalAmountOut` | `string` | Quoted route output in wei before the Switch protocol fee and slippage. Protocol-native quoters such as Flap Portal may already include their token-tax effect. |
 | `expectedOutputAmount` | `string` | Expected output the user will actually receive, in wei. Accounts for sell tax, protocol fee, and buy tax — but NOT slippage. This is the most accurate value to display as the estimated received amount. When `feeOnOutput` is passed correctly, this is **exact** (matches on-chain execution). |
-| `minAmountOut` | `string` | Minimum acceptable output after token taxes, fee, and slippage. When tax tokens are involved: `totalAmountOut × (10000 − sellTaxBps) / 10000 × (10000 − feeBps) / 10000 × (10000 − buyTaxBps) / 10000 × (10000 − slippageBps) / 10000`. This is the value encoded in the `tx` calldata as `_minTotalAmountOut`. |
+| `minAmountOut` | `string` | Minimum acceptable output after adapter-specific tax accounting, fee, and slippage. Use the API value directly; do not recompute it by multiplying the reported tax rates. This is encoded in `tx.data` as `_minTotalAmountOut`. |
 | `paths` | `SwapPath[]` | Human-readable path descriptions |
-| `routeAllocation` | `RouteAllocationPlan` | Structured route breakdown (matches on-chain structs) |
+| `routeAllocation` | `RouteAllocationPlan` | Human-readable structured route breakdown for display and analytics. It is not a drop-in on-chain ABI value. |
 | `tx` | `SwapTransaction?` | Ready-to-send transaction (fee on input). Only present when `sender` is provided. |
 | `txFeeOnOutput` | `SwapTransaction?` | Ready-to-send transaction (fee on output). Only present when `sender` is provided. Choose between `tx` and `txFeeOnOutput` at send time. |
 | `fromTokenTax` | `TokenTaxResponse?` | Transfer tax info for the input token. See [Tax Tokens Deep Dive](#tax-tokens-deep-dive). |
@@ -775,6 +776,13 @@ Present on every quote response as `fromTokenTax` and `toTokenTax`. Reports whet
 | `adapter` | `string` | Human-readable DEX adapter name (e.g. `"PulseXV2"`) |
 | `amountIn` | `string` | Input amount routed through this adapter |
 | `amountOut` | `string` | Expected output from this adapter |
+| `fee` | `number?` | V3 fee tier or concentrated-liquidity tick-spacing hint; zero when unused |
+
+Use the API-provided `tx.data` for execution. If you intentionally construct
+router or limit-order calldata yourself, each on-chain adapter leg is
+`{ adapter, amountIn, fee, data }`; `data` is required and should be `0x` for
+adapters that need no payload. The display-oriented `routeAllocation` does not
+contain enough information to encode every route family.
 
 ---
 
