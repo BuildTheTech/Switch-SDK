@@ -51,6 +51,20 @@ export const NATIVE_PLS = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
 /** Wrapped PLS (WPLS) ERC-20 token address */
 export const WPLS = "0xA1077a294dDE1B09bB078844df40758a5D0f9a27";
 
+/** Finvesta's production Liberty-style V3 adapter index in SwitchRouter. */
+export const FINVESTA_V3_ADAPTER_INDEX = 20;
+
+/** Verified Finvesta V3 adapter. Not safe for transfer-tax-sensitive hops. */
+export const FINVESTA_V3_ADAPTER =
+  "0x012c44d0C465819eF3CeAC208e0c1B272087a8b4";
+
+/** Finvesta V3 factory queried by the adapter. */
+export const FINVESTA_V3_FACTORY =
+  "0x7f5c7C5144b4B4c6e954A5b2D75C318C5467EFDc";
+
+/** Factory-enabled Finvesta fee tiers, in hundredths of one basis point. */
+export const FINVESTA_V3_FEE_TIERS = [100, 500, 2500, 10000] as const;
+
 // ── Limit Order contract ────────────────────────────────────────────────
 
 /**

@@ -147,8 +147,8 @@ async function main() {
 
   // (Optional) restrict routing to specific DEXes by index.
   // Get indices from Step 1 (adapters). Omit to use all DEXes.
-  // Example: route only through PulseXV2 (3) and UniswapV3 (6):
-  // params.set("adapters", "3,6");
+  // Example: route only through PulseXV2 (3) and UniswapV3 (7):
+  // params.set("adapters", "3,7");
 
   const url = `${QUOTE_ENDPOINT}?${params}`;
   console.log(`URL: ${url}\n`);

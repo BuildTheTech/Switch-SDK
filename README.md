@@ -217,7 +217,7 @@ For the most accurate swap quotes — especially with tax tokens — follow this
 │  → Detect transfer taxes on both tokens                                    │
 │  → Determine feeOnOutput based on tax results + your fee strategy          │
 ├────────────────────────────────────────────────────────────────────────────┤
-│  Step 3: GET /swap/quote?...&feeOnOutput=true/false&adapters=0,3,6        │
+│  Step 3: GET /swap/quote?...&feeOnOutput=true/false&adapters=0,3,7        │
 │  → Pass feeOnOutput + adapter filter for an exact expectedOutputAmount     │
 │  → Display quote and execute swap                                          │
 └────────────────────────────────────────────────────────────────────────────┘
@@ -408,23 +408,34 @@ curl -H "x-api-key: YOUR_KEY" "https://quote.switch.win/swap/adapters?network=pu
 ```json
 {
   "adapters": [
-    { "index": 0,  "name": "UniswapV2",    "address": "0x8730c3e2cf2c8cda8e6166837a1ed26f46aa9e59" },
-    { "index": 1,  "name": "SushiV2",      "address": "0xff6b56d3f444eb5b7fa1db047f57140c84810376" },
-    { "index": 2,  "name": "PulseXV1",     "address": "0xc8c50c6fac75b0d082d5b99f52581ca25ccb719f" },
-    { "index": 3,  "name": "PulseXV2",     "address": "0x5d3ef85adcf1532e9111e4a6a331f6e5ddfb2d25" },
-    { "index": 4,  "name": "9inchV2",      "address": "0xcaa612cde3d3fbe97be97eb5f79bc91597432d55" },
-    { "index": 5,  "name": "DextopV2",     "address": "0x72d8f2b9cfb9cfd73403288a126578b7e31ee6ac" },
-    { "index": 6,  "name": "UniswapV3",    "address": "0x7bbb21bdc6c94b90367a0b1835e1f233ab39d6a7" },
-    { "index": 7,  "name": "9mmV3",        "address": "0x42cf246e6271feb2c3e6d14fc405ed0bf5152be2" },
-    { "index": 8,  "name": "9inchV3",      "address": "0xbb017a0da988b72f202cd19655361cdb57383802" },
-    { "index": 9,  "name": "pDexV3",       "address": "0xb2141992cb4500e7099bc6d7d3da405e63259dcf" },
-    { "index": 10, "name": "DextopV3",     "address": "0xe3073faaed1490eab7b3e65f2a1659c9853d5379" },
-    { "index": 11, "name": "Phux",         "address": "0xe9a3aefd86b9230abc980c012b28e39f8561682c" },
-    { "index": 12, "name": "Tide",         "address": "0x235ba14f6df83c17353e410e5a2dcc052a5a0f64" },
-    { "index": 13, "name": "PulseXStable", "address": "0xac4da986100724983042ec28c28db243e2f828cb" }
+    { "index": 0,  "name": "UniswapV2",       "address": "0x971eeb4a5080834f7df2b9d7a11dfbeaa7bc187e" },
+    { "index": 1,  "name": "SushiV2",         "address": "0x5ef53d5eb4f011d9bed35e7112945f0dc96b3822" },
+    { "index": 2,  "name": "PulseXV1",        "address": "0x6f5ccfca1f1d3fff70202463df05573cc1668cb6" },
+    { "index": 3,  "name": "PulseXV2",        "address": "0x393e382520b93b8f662dc76295000930c06d689f" },
+    { "index": 4,  "name": "9inchV2",         "address": "0x4810beadf72a1f297f4e5ff71424d98b2bf4441e" },
+    { "index": 5,  "name": "DextopV2",        "address": "0xd096faccdd475f2c86f3c668958fcd435e32bdc2" },
+    { "index": 6,  "name": "9mmV2",           "address": "0x67a25e62309e39e7b46f3b6f868bcf336c4ce8e2" },
+    { "index": 7,  "name": "UniswapV3",       "address": "0xc39cb531f71059fd427a63bf8a2f4b822d6b9b02" },
+    { "index": 8,  "name": "9mmV3",           "address": "0x32a63187814d6b81badc6c13dc9d46a8050fad12" },
+    { "index": 9,  "name": "9inchV3",         "address": "0xe46ef88400997a84336e1a3c14d2528da90572b6" },
+    { "index": 10, "name": "pDexV3",          "address": "0xb718836aca6ddb8745a0cecc687467dda648bdf2" },
+    { "index": 11, "name": "DextopV3",        "address": "0x8b8024ca2a4fdb34697620b80320e76c41a67124" },
+    { "index": 12, "name": "Phux",            "address": "0x98ae0249da42f789b9745b248d346a727f37e937" },
+    { "index": 13, "name": "Tide",            "address": "0xf72c3a301b533eff7e3efa32549f9c934a4f4b29" },
+    { "index": 14, "name": "PulseXStable",    "address": "0xf3b9742c859d089b6a2e3b3228dabb2c842b57d2" },
+    { "index": 15, "name": "AgoraX",          "address": "0x79ea0ec76b510d08bf4ca9a4a53a1f9f80ea1697" },
+    { "index": 16, "name": "JoltOTC",         "address": "0x033372eb8df4baad260e20d716742a825f1f113f" },
+    { "index": 17, "name": "SwitchLimitOrder", "address": "0xa799f49dcdec9056293187faa5f6f3727942a4ca" },
+    { "index": 18, "name": "SwitchX",         "address": "0xf8744452598883792f235b92452127f4a8587db3" },
+    { "index": 19, "name": "LibertySwapV3",   "address": "0xba24bb413ab32f02073385850907ebcf0a357e70" },
+    { "index": 20, "name": "FinvestaV3",      "address": "0x012c44d0c465819ef3ceac208e0c1b272087a8b4" }
   ]
 }
 ```
+
+Finvesta is a Liberty-style V3 venue with fee tiers `100`, `500`, `2500`, and
+`10000`. It can be selected for normal routes, but it is not transfer-tax safe.
+Always treat the live `/swap/adapters` response as the runtime source of truth.
 
 #### Using adapter indices to filter routing
 
@@ -435,7 +446,7 @@ Pass adapter indices as a comma-separated `adapters` param to `/swap/quote`:
 GET /swap/quote?...&adapters=3
 
 # Route through PulseXV2 + UniswapV3:
-GET /swap/quote?...&adapters=3,6
+GET /swap/quote?...&adapters=3,7
 
 # Exclude nothing (default — omit the param):
 GET /swap/quote?...
@@ -584,7 +595,7 @@ Returns the optimal split-route for a swap and (optionally) a ready-to-send tran
 | `fee` | No | integer | `30` | Protocol fee in basis points (0.30 %). Range: `30`–`100`. Defaults to `30` if omitted. |
 | `partnerAddress` | No | address | `0x0…0` | Your partner wallet to receive 50 % of collected fees. Omit or pass `0x0` for no partner. |
 | `feeOnOutput` | No | string | `"false"` | Controls fee mode. `"true"` = fee deducted from output. `"false"` = fee deducted from input (default). Affects `expectedOutputAmount` accuracy — see [Swap Integration Flow](#swap-integration-flow). |
-| `adapters` | No | string | — | Comma-separated adapter indices to restrict routing (e.g. `"3"` for PulseXV2 only, `"3,6"` for PulseXV2 + UniswapV3). Get available indices from [List Adapters](#list-adapters). |
+| `adapters` | No | string | — | Comma-separated adapter indices to restrict routing (e.g. `"3"` for PulseXV2 only, `"3,7"` for PulseXV2 + UniswapV3). Get available indices from [List Adapters](#list-adapters). |
 
 > \* If `sender` is omitted, the response will still contain routing data, `minAmountOut`, and tax info, but the `tx` object will be absent. This is useful for **showing estimated swap output before the user connects their wallet** — you can display prices, routes, and tax warnings without requiring a wallet connection. Once the user connects, re-fetch the quote with `sender` to get the ready-to-send `tx` object.
 
@@ -959,6 +970,9 @@ Robinhood constants are available from
 | **SwitchPLSFlow** (V1 — legacy) | `0x88c9e2C83b6B7c707602e548481e58E920694E64` |
 | **Native PLS sentinel** | `0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE` |
 | **WPLS** | `0xA1077a294dDE1B09bB078844df40758a5D0f9a27` |
+| **Finvesta V3 adapter** | Index `20`; `0x012c44d0C465819eF3CeAC208e0c1B272087a8b4` (not transfer-tax safe) |
+| **Finvesta V3 factory** | `0x7f5c7C5144b4B4c6e954A5b2D75C318C5467EFDc` |
+| **Finvesta fee tiers** | `100`, `500`, `2500`, `10000` |
 | **Fee denominator** | `10000` (basis points) |
 | **Max slippage** | `5000` bps (50 %) |
 | **Max fee** | `100` bps (1 %) |
