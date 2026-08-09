@@ -40,6 +40,7 @@ export const ROBINHOOD_SWITCH_CONTRACTS = {
   catnipV2Adapter: "0x5b2Ca358d56490Dc86224D502522314De7707237",
   pancakeSwapV2Adapter: "0x3B6e71A59553143937Fef74a7B50AFD24528786E",
   pancakeSwapV3Adapter: "0xD2Adac87bab4f0f99CF2a21c552c88d1C9825cCC",
+  robinSwapV2Adapter: "0xF694145F104c3C24f723301e160D2Ccf0Db31FE6",
   robinSwapV3Adapter: "0x798f77D63b46b0E019de206E111e5ea5CC16BEc8",
   sushiSwapV3Adapter: "0xca3EA0Fd6E31f94c81B6586836790adE638313ED",
   gigaV2Adapter: "0xa379c7D17F7fEe735773879D4069886B117AB54a",
@@ -145,42 +146,48 @@ export const ROBINHOOD_ADAPTERS = [
   },
   {
     index: 13,
+    name: "RobinSwapV2",
+    address: ROBINHOOD_SWITCH_CONTRACTS.robinSwapV2Adapter,
+    taxSafe: true,
+  },
+  {
+    index: 14,
     name: "RobinSwapV3",
     address: ROBINHOOD_SWITCH_CONTRACTS.robinSwapV3Adapter,
     taxSafe: false,
   },
   {
-    index: 14,
+    index: 15,
     name: "SushiSwapV3",
     address: ROBINHOOD_SWITCH_CONTRACTS.sushiSwapV3Adapter,
     taxSafe: false,
   },
   {
-    index: 15,
+    index: 16,
     name: "GigaV2",
     address: ROBINHOOD_SWITCH_CONTRACTS.gigaV2Adapter,
     taxSafe: true,
   },
   {
-    index: 16,
+    index: 17,
     name: "GigaV3",
     address: ROBINHOOD_SWITCH_CONTRACTS.gigaV3Adapter,
     taxSafe: false,
   },
   {
-    index: 17,
+    index: 18,
     name: "Flap",
     address: ROBINHOOD_SWITCH_CONTRACTS.flapAdapter,
     taxSafe: true,
   },
   {
-    index: 18,
+    index: 19,
     name: "RamsesV3",
     address: ROBINHOOD_SWITCH_CONTRACTS.ramsesV3Adapter,
     taxSafe: false,
   },
   {
-    index: 19,
+    index: 20,
     name: "RamsesV2",
     address: ROBINHOOD_SWITCH_CONTRACTS.ramsesV2Adapter,
     taxSafe: true,
@@ -189,7 +196,7 @@ export const ROBINHOOD_ADAPTERS = [
 
 /** Adapter indices currently eligible for Robinhood transfer-tax routes. */
 export const ROBINHOOD_TAX_SAFE_ADAPTER_INDICES = [
-  0, 4, 7, 10, 11, 15, 17, 19,
+  0, 4, 7, 10, 11, 13, 16, 18, 20,
 ] as const;
 
 /** Current Robinhood transfer-tax-safe adapter metadata. */
