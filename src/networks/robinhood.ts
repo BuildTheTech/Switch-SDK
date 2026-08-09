@@ -29,7 +29,7 @@ export const ROBINHOOD_SWITCH_CONTRACTS = {
   nativeEthFlow: "0x029FfC6aF9112eA078f1D6f4a98826DDB2136cf6",
   uniswapV2Adapter: "0x7a14d7A8509a66209D4332843b983b29bF5604A4",
   uniswapV3Adapter: "0xbcA08f296d9Ba0dc19Aa0E05D355365cE29A3205",
-  uniswapV4Adapter: "0x754dDCD05aFbAd1cc7Bc42B9268EB586F579E7F6",
+  uniswapV4Adapter: "0xB9885d3C55e79499bf887F2fBe445e01A8cFFf1c",
   limitOrderAdapter: "0x412F625072c10e58C619D1e0b3C95cd3d5689871",
   swapHoodV2Adapter: "0x6D8746f02e52944c13824fA691c6f4186E463354",
   swapHoodV3Adapter: "0x9645dE0AcB48F0AAefdBEb423F0558457907DE98",
@@ -39,6 +39,7 @@ export const ROBINHOOD_SWITCH_CONTRACTS = {
   aeonAlgebraAdapter: "0x20615954FB87360139e7DdDB519359498EbD1904",
   catnipV2Adapter: "0x5b2Ca358d56490Dc86224D502522314De7707237",
   pancakeSwapV2Adapter: "0x3B6e71A59553143937Fef74a7B50AFD24528786E",
+  pancakeSwapV3Adapter: "0xD2Adac87bab4f0f99CF2a21c552c88d1C9825cCC",
   robinSwapV3Adapter: "0x798f77D63b46b0E019de206E111e5ea5CC16BEc8",
   sushiSwapV3Adapter: "0xca3EA0Fd6E31f94c81B6586836790adE638313ED",
   gigaV2Adapter: "0xa379c7D17F7fEe735773879D4069886B117AB54a",
@@ -58,7 +59,7 @@ export interface RobinhoodAdapter {
 }
 
 /**
- * Snapshot of the ordered production adapter registry verified on 2026-08-02.
+ * Snapshot of the ordered production adapter registry verified on 2026-08-09.
  *
  * Adapter registration can change. Fetch
  * `GET /swap/adapters?network=robinhood` when runtime freshness matters.
@@ -138,42 +139,48 @@ export const ROBINHOOD_ADAPTERS = [
   },
   {
     index: 12,
+    name: "PancakeSwapV3",
+    address: ROBINHOOD_SWITCH_CONTRACTS.pancakeSwapV3Adapter,
+    taxSafe: false,
+  },
+  {
+    index: 13,
     name: "RobinSwapV3",
     address: ROBINHOOD_SWITCH_CONTRACTS.robinSwapV3Adapter,
     taxSafe: false,
   },
   {
-    index: 13,
+    index: 14,
     name: "SushiSwapV3",
     address: ROBINHOOD_SWITCH_CONTRACTS.sushiSwapV3Adapter,
     taxSafe: false,
   },
   {
-    index: 14,
+    index: 15,
     name: "GigaV2",
     address: ROBINHOOD_SWITCH_CONTRACTS.gigaV2Adapter,
     taxSafe: true,
   },
   {
-    index: 15,
+    index: 16,
     name: "GigaV3",
     address: ROBINHOOD_SWITCH_CONTRACTS.gigaV3Adapter,
     taxSafe: false,
   },
   {
-    index: 16,
+    index: 17,
     name: "Flap",
     address: ROBINHOOD_SWITCH_CONTRACTS.flapAdapter,
     taxSafe: true,
   },
   {
-    index: 17,
+    index: 18,
     name: "RamsesV3",
     address: ROBINHOOD_SWITCH_CONTRACTS.ramsesV3Adapter,
     taxSafe: false,
   },
   {
-    index: 18,
+    index: 19,
     name: "RamsesV2",
     address: ROBINHOOD_SWITCH_CONTRACTS.ramsesV2Adapter,
     taxSafe: true,
@@ -182,7 +189,7 @@ export const ROBINHOOD_ADAPTERS = [
 
 /** Adapter indices currently eligible for Robinhood transfer-tax routes. */
 export const ROBINHOOD_TAX_SAFE_ADAPTER_INDICES = [
-  0, 4, 7, 10, 11, 14, 16, 18,
+  0, 4, 7, 10, 11, 15, 17, 19,
 ] as const;
 
 /** Current Robinhood transfer-tax-safe adapter metadata. */

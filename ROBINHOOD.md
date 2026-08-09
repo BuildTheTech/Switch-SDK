@@ -11,7 +11,7 @@ Production integration reference for Switch swaps on Robinhood Chain mainnet.
 | Explorer | `https://robinhoodchain.blockscout.com` |
 | Quote API | `https://quote.switch.win/swap/quote` |
 | Tax API | `https://quote.switch.win/swap/checkTax` |
-| Supported liquidity | 19 adapters: Uniswap V2/V3/V4, Switch limit orders, SwapHood, Up33, Sheriff, Aeon, Catnip, PancakeSwap, RobinSwap, SushiSwap, GIGA, Flap, and Ramses |
+| Supported liquidity | 20 adapters: Uniswap V2/V3/V4, Switch limit orders, SwapHood, Up33, Sheriff, Aeon, Catnip, PancakeSwap V2/V3, RobinSwap, SushiSwap, GIGA, Flap, and Ramses |
 | Limit orders | Available: EIP-712 ERC-20 orders plus native ETH flow |
 
 ## Contents
@@ -107,7 +107,7 @@ await window.ethereum.request({
 | SwitchRouter | `0x8730C3e2cF2c8CDa8E6166837A1Ed26f46aa9E59` |
 | Uniswap V2 adapter | `0x7a14d7A8509a66209D4332843b983b29bF5604A4` |
 | Uniswap V3 adapter | `0xbcA08f296d9Ba0dc19Aa0E05D355365cE29A3205` |
-| Uniswap V4 adapter | `0x754dDCD05aFbAd1cc7Bc42B9268EB586F579E7F6` |
+| Uniswap V4 adapter | `0xB9885d3C55e79499bf887F2fBe445e01A8cFFf1c` |
 | SwitchLimitOrder | `0x752c50DDd3B426cAE3D7A995F313Ac74ac6B0230` |
 | Native ETH flow | `0x029FfC6aF9112eA078f1D6f4a98826DDB2136cf6` |
 | Switch Limit Order adapter (index 3) | `0x412F625072c10e58C619D1e0b3C95cd3d5689871` |
@@ -119,13 +119,19 @@ await window.ethereum.request({
 | Aeon Algebra adapter (index 9) | `0x20615954FB87360139e7DdDB519359498EbD1904` |
 | Catnip V2 adapter (index 10) | `0x5b2Ca358d56490Dc86224D502522314De7707237` |
 | PancakeSwap V2 adapter (index 11) | `0x3B6e71A59553143937Fef74a7B50AFD24528786E` |
-| RobinSwap V3 adapter (index 12) | `0x798f77D63b46b0E019de206E111e5ea5CC16BEc8` |
-| SushiSwap V3 adapter (index 13) | `0xca3EA0Fd6E31f94c81B6586836790adE638313ED` |
-| GIGA V2 adapter (index 14) | `0xa379c7D17F7fEe735773879D4069886B117AB54a` |
-| GIGA V3 adapter (index 15) | `0xcAa612CDe3d3FbE97Be97eB5f79BC91597432d55` |
-| Flap Portal adapter (index 16) | `0x6af2A4475C44d5833575150Bf7C3D3FE6Bf4F344` |
-| Ramses V3 adapter (index 17) | `0xdBf182774C60932c6fe1Bf3FFaB8Ca28CCb0dC17` |
-| Ramses V2 adapter (index 18) | `0x5fe3b873c222e76f7630b40052f07ee06196E6d3` |
+| PancakeSwap V3 adapter (index 12) | `0xD2Adac87bab4f0f99CF2a21c552c88d1C9825cCC` |
+| RobinSwap V3 adapter (index 13) | `0x798f77D63b46b0E019de206E111e5ea5CC16BEc8` |
+| SushiSwap V3 adapter (index 14) | `0xca3EA0Fd6E31f94c81B6586836790adE638313ED` |
+| GIGA V2 adapter (index 15) | `0xa379c7D17F7fEe735773879D4069886B117AB54a` |
+| GIGA V3 adapter (index 16) | `0xcAa612CDe3d3FbE97Be97eB5f79BC91597432d55` |
+| Flap Portal adapter (index 17) | `0x6af2A4475C44d5833575150Bf7C3D3FE6Bf4F344` |
+| Ramses V3 adapter (index 18) | `0xdBf182774C60932c6fe1Bf3FFaB8Ca28CCb0dC17` |
+| Ramses V2 adapter (index 19) | `0x5fe3b873c222e76f7630b40052f07ee06196E6d3` |
+
+The PancakeSwap V3 adapter was created in
+[deployment transaction `0xa82a...cfa8`](https://robinhoodchain.blockscout.com/tx/0xa82a53e8e32e7a26be720d62e157c820e8c25ccbb3826e604435480606e0cfa8)
+and inserted at index `12` in
+[router transaction `0xae59...94b5`](https://robinhoodchain.blockscout.com/tx/0xae5949bad45dfbdcd930a2fd39e5fb22914b51704f8c7b137f996a154e8d94b5).
 
 The V4 adapter was created in
 [deployment transaction `0x60d5...34a7`](https://robinhoodchain.blockscout.com/tx/0x60d56466a8162a643a15ecde98322ec05ea23d44d03fbd817df4ddbaef4834a7)
@@ -224,11 +230,10 @@ V4 discovery must preserve the full key. The backend selects the key and
 embeds adapter-specific route data in the quote; clients should submit the
 returned transaction unchanged rather than reconstructing V4 calldata.
 
-Phase one supports **hookless static-fee pools only** (`hooks` is the zero
-address, hook data is empty, and the dynamic-fee flag is not set). Pools with
-custom hooks or dynamic fees are not considered until their behavior and
-required hook data have been explicitly reviewed and allowed. This restriction
-does not reduce V2 or V3 routing coverage.
+The current adapter supplies empty hook data and supports hooked pools whose
+normal V4 quoter simulation succeeds. Hooks requiring proprietary hook data or
+router allowlisting still require a specific integration. This does not reduce
+V2 or V3 routing coverage.
 
 V4 can represent native ETH as the zero-address currency. Switch routes use
 the canonical Robinhood WETH address, so the V4 adapter unwraps WETH when a
@@ -237,7 +242,7 @@ it. API callers should continue using `ROBINHOOD_NATIVE_ETH` for a native user
 input/output and `ROBINHOOD_TOKENS.WETH.address` for the ERC-20.
 
 The Robinhood Uniswap V4 adapter is deployed at
-`0x754dDCD05aFbAd1cc7Bc42B9268EB586F579E7F6`, whitelisted in the production
+`0xB9885d3C55e79499bf887F2fBe445e01A8cFFf1c`, whitelisted in the production
 SwitchRouter at adapter index `2`, and exported as
 `ROBINHOOD_SWITCH_CONTRACTS.uniswapV4Adapter`. Continue treating
 `GET /swap/adapters?network=robinhood` as the source of truth for the adapters
@@ -257,8 +262,8 @@ The canonical Robinhood V4 infrastructure is available through
 | Permit2 | `0x000000000022D473030F116dDEE9F6B43aC78BA3` |
 
 If either side is detected as a transfer-tax token, the complete route is
-restricted to tax-safe adapters `0`, `4`, `7`, `10`, `11`, `14`, `16`, and
-`18`. Indices `14` and `18` use direct-pair V2 execution. Flap at index `16`
+restricted to tax-safe adapters `0`, `4`, `7`, `10`, `11`, `15`, `17`, and
+`19`. Indices `15` and `19` use direct-pair V2 execution. Flap at index `17`
 must execute through its Portal, whose quote already includes Flap token taxes
 in both directions; clients must not apply those taxes a second time.
 
@@ -493,13 +498,14 @@ Robinhood currently returns:
 | `9` | Aeon Algebra |
 | `10` | Catnip V2 |
 | `11` | PancakeSwap V2 |
-| `12` | RobinSwap V3 |
-| `13` | SushiSwap V3 |
-| `14` | GIGA V2 |
-| `15` | GIGA V3 |
-| `16` | Flap |
-| `17` | Ramses V3 |
-| `18` | Ramses V2 |
+| `12` | PancakeSwap V3 |
+| `13` | RobinSwap V3 |
+| `14` | SushiSwap V3 |
+| `15` | GIGA V2 |
+| `16` | GIGA V3 |
+| `17` | Flap |
+| `18` | Ramses V3 |
+| `19` | Ramses V2 |
 
 Treat the endpoint response, not this document, as the source of truth for
 which adapters are currently selectable.
@@ -507,7 +513,7 @@ which adapters are currently selectable.
 Do not permanently hard-code the available adapter list in an integration.
 Fetch it when presenting routing-source controls. If a quote involves a tax
 token, the backend restricts routing to tax-safe adapters `0`, `4`, `7`, `10`,
-`11`, `14`, `16`, and `18`; an explicit filter that excludes all of them is
+`11`, `15`, `17`, and `19`; an explicit filter that excludes all of them is
 rejected.
 
 ### Check token tax
@@ -649,13 +655,13 @@ Always identify tokens by address and obtain a fresh quote and tax check.
 
 ### Routing configuration
 
-The production router currently exposes nineteen ordered adapters:
+The production router currently exposes twenty ordered adapters:
 
 | Index | Venue | Routing family |
 |---:|---|---|
 | `0` | Uniswap V2 | Direct-pair V2 |
 | `1` | Uniswap V3 | V3 tiers `100`, `500`, `3000`, `10000` |
-| `2` | Uniswap V4 | Complete hookless static-fee `PoolKey` |
+| `2` | Uniswap V4 | Complete `PoolKey`; empty hook data for compatible hooks |
 | `3` | Switch limit orders | Signed/on-chain order liquidity |
 | `4` | SwapHood V2 | Pair-owned variable-fee V2 |
 | `5` | SwapHood V3 | Pancake V3 tiers `100`, `500`, `2500`, `10000` |
@@ -664,14 +670,15 @@ The production router currently exposes nineteen ordered adapters:
 | `8` | Sheriff | Algebra Integral |
 | `9` | Aeon | Algebra Integral with plugin-aware fees |
 | `10` | Catnip | Direct-pair V2, fixed 30 bps |
-| `11` | PancakeSwap | Direct-pair V2, fixed 25 bps |
-| `12` | RobinSwap | V3 tiers `100`, `500`, `2500`, `3000`, `10000` |
-| `13` | SushiSwap | V3 tiers `500`, `3000`, `10000` |
-| `14` | GIGA V2 | Direct-pair V2 using the pair's live quote and pair-owned fee |
-| `15` | GIGA V3 | V3 tiers `100`, `500`, `1000`, `2000`, `3000`, `10000` |
-| `16` | Flap | Portal-executed bonding curve; Portal quote includes token tax |
-| `17` | Ramses V3 | Tick spacings `1`, `5`, `10`, `50`, `100`, `200`, stored in the route `fee` field |
-| `18` | Ramses V2 | Direct-pair, pair-owned variable-fee V2 |
+| `11` | PancakeSwap V2 | Direct-pair V2, fixed 25 bps |
+| `12` | PancakeSwap V3 | Factory-enabled tiers `100`, `500`, `2500`, `10000` |
+| `13` | RobinSwap | V3 tiers `100`, `500`, `2500`, `3000`, `10000` |
+| `14` | SushiSwap | V3 tiers `500`, `3000`, `10000` |
+| `15` | GIGA V2 | Direct-pair V2 using the pair's live quote and pair-owned fee |
+| `16` | GIGA V3 | V3 tiers `100`, `500`, `1000`, `2000`, `3000`, `10000` |
+| `17` | Flap | Portal-executed bonding curve; Portal quote includes token tax |
+| `18` | Ramses V3 | Tick spacings `1`, `5`, `10`, `50`, `100`, `200`, stored in the route `fee` field |
+| `19` | Ramses V2 | Direct-pair, pair-owned variable-fee V2 |
 
 V4 pools are discovered by complete `PoolKey`, not by applying a V3 fee-tier
 list. Native-ETH V4 currencies are normalized through the WETH/native alias
@@ -684,7 +691,7 @@ JUGGERNAUT, MARIAN, and WALLET. The expanded set was selected from the
 it is taxed; INDEX remains an endpoint token but is excluded because its
 dominant liquidity depends on V4 hooks that are not yet supported. If either side is
 detected as a transfer-tax token, the backend restricts the entire route to
-tax-safe adapters `0`, `4`, `7`, `10`, `11`, `14`, `16`, and `18`;
+tax-safe adapters `0`, `4`, `7`, `10`, `11`, `15`, `17`, and `19`;
 concentrated-liquidity and limit-order adapters are excluded. Flap is the one
 non-direct-pair member: only its Portal can execute the curve swap, and the
 Portal quote already includes the Flap token tax.
@@ -705,9 +712,10 @@ untrusted clients.
 ## Current limitations
 
 - Rialto liquidity is not integrated.
-- Robinhood market routing is limited to the nineteen production adapters
+- Robinhood market routing is limited to the twenty production adapters
   listed above. Always use `/swap/adapters` as the runtime source of truth.
-- The first V4 phase intentionally excludes hooked and dynamic-fee pools.
+- V4 hooks that require proprietary hook data or router allowlisting need a
+  venue-specific integration.
 - A V4 allocation currently selects its best single PoolKey; intra-V4
   multi-pool splitting is not yet enabled. V4 can still split against other
   eligible adapters.
