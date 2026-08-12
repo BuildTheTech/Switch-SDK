@@ -428,13 +428,19 @@ curl -H "x-api-key: YOUR_KEY" "https://quote.switch.win/swap/adapters?network=pu
     { "index": 17, "name": "SwitchLimitOrder", "address": "0xa799f49dcdec9056293187faa5f6f3727942a4ca" },
     { "index": 18, "name": "SwitchX",         "address": "0xf8744452598883792f235b92452127f4a8587db3" },
     { "index": 19, "name": "LibertySwapV3",   "address": "0xba24bb413ab32f02073385850907ebcf0a357e70" },
-    { "index": 20, "name": "FinvestaV3",      "address": "0x012c44d0c465819ef3ceac208e0c1b272087a8b4" }
+    { "index": 20, "name": "FinvestaV3",      "address": "0x012c44d0c465819ef3ceac208e0c1b272087a8b4" },
+    { "index": 21, "name": "TrenchV2",        "address": "0xaf48bb0936d9fa522650236917321d89978a8591" },
+    { "index": 22, "name": "TrenchV3",        "address": "0x01957ec5fcc079f1bb388b9f261278dac42cf2e9" }
   ]
 }
 ```
 
 Finvesta is a Liberty-style V3 venue with fee tiers `100`, `500`, `2500`, and
 `10000`. It can be selected for normal routes, but it is not transfer-tax safe.
+Trench V2 is a direct-pair adapter with dynamic pair-specific fees and is
+eligible for transfer-tax-sensitive hops. Trench V3 uses direct pool simulation
+across fee tiers `100`, `500`, `2500`, `3000`, and `10000`; like other V3
+callback adapters, it is not transfer-tax safe.
 Always treat the live `/swap/adapters` response as the runtime source of truth.
 
 #### Using adapter indices to filter routing
@@ -973,6 +979,11 @@ Robinhood constants are available from
 | **Finvesta V3 adapter** | Index `20`; `0x012c44d0C465819eF3CeAC208e0c1B272087a8b4` (not transfer-tax safe) |
 | **Finvesta V3 factory** | `0x7f5c7C5144b4B4c6e954A5b2D75C318C5467EFDc` |
 | **Finvesta fee tiers** | `100`, `500`, `2500`, `10000` |
+| **Trench V2 adapter** | Index `21`; `0xAf48bb0936D9fA522650236917321D89978A8591` (direct-pair, transfer-tax safe) |
+| **Trench V2 factory** | `0xA024e4574406BEf89e624c75758c700B5bED27C7` |
+| **Trench V3 adapter** | Index `22`; `0x01957eC5FCC079f1bB388b9f261278daC42cf2E9` (not transfer-tax safe) |
+| **Trench V3 factory** | `0xCAeF0a906F3323595A8faA14DF7eDee6F59220af` |
+| **Trench V3 fee tiers** | `100`, `500`, `2500`, `3000`, `10000` |
 | **Fee denominator** | `10000` (basis points) |
 | **Max slippage** | `5000` bps (50 %) |
 | **Max fee** | `100` bps (1 %) |

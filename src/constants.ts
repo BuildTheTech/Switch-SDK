@@ -65,6 +65,35 @@ export const FINVESTA_V3_FACTORY =
 /** Factory-enabled Finvesta fee tiers, in hundredths of one basis point. */
 export const FINVESTA_V3_FEE_TIERS = [100, 500, 2500, 10000] as const;
 
+/** Trench V2's production direct-pair adapter index in SwitchRouter. */
+export const TRENCH_V2_ADAPTER_INDEX = 21;
+
+/**
+ * Verified Trench V2 direct-pair adapter.
+ * Eligible for transfer-tax-sensitive hops because input is sent directly to
+ * the pair and execution measures the amount actually received.
+ */
+export const TRENCH_V2_ADAPTER =
+  "0xAf48bb0936D9fA522650236917321D89978A8591";
+
+/** Trench V2 factory queried for pairs and pair-specific fees. */
+export const TRENCH_V2_FACTORY =
+  "0xA024e4574406BEf89e624c75758c700B5bED27C7";
+
+/** Trench V3's production self-quoter adapter index in SwitchRouter. */
+export const TRENCH_V3_ADAPTER_INDEX = 22;
+
+/** Verified Trench V3 adapter. Not safe for transfer-tax-sensitive hops. */
+export const TRENCH_V3_ADAPTER =
+  "0x01957eC5FCC079f1bB388b9f261278daC42cf2E9";
+
+/** Trench V3 factory queried by the adapter. */
+export const TRENCH_V3_FACTORY =
+  "0xCAeF0a906F3323595A8faA14DF7eDee6F59220af";
+
+/** Factory-enabled Trench V3 fee tiers, in hundredths of one basis point. */
+export const TRENCH_V3_FEE_TIERS = [100, 500, 2500, 3000, 10000] as const;
+
 // ── Limit Order contract ────────────────────────────────────────────────
 
 /**
