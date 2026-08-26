@@ -37,10 +37,14 @@ export const CHAIN_ID = 369;
  *
  * **Important:** Do NOT hardcode this address as the `to` field when sending
  * swap transactions. Always use `tx.to` from the quote response — the router
- * contract may be redeployed. This constant is safe for **approvals only**
- * (the new router honours legacy allowances).
+ * contract may be redeployed. This constant is the current approval target;
+ * a router migration requires a fresh ERC-20 allowance for the new spender.
  */
-export const SWITCH_ROUTER = "0x0305fcb5dA680EA6fd1B01A96C1949175B99d406";
+export const SWITCH_ROUTER = "0x2dFc8B6e13fF7F04e37Ef97006084805D65a6F19";
+
+/** Previous PulseChain Router retained for historical transactions and trusted legacy drain tooling. */
+export const LEGACY_SWITCH_ROUTER =
+  "0x0305fcb5dA680EA6fd1B01A96C1949175B99d406";
 
 /**
  * Native PLS sentinel address.
@@ -99,11 +103,11 @@ export const TRENCH_V3_FEE_TIERS = [100, 500, 2500, 3000, 10000] as const;
 /**
  * SwitchLimitOrder contract address on PulseChain.
  *
- * This is the current production limit order contract.
- * For integrators, treat this as user-facing V2.
+ * This is the current protected production limit order contract.
+ * For integrators, treat this as user-facing V3.
  * The EIP-712 domain `verifyingContract` MUST match this address.
  */
-export const SWITCH_LIMIT_ORDER = "0x8e3881bdF81Fc0211383B2e576076B654F7aFD86";
+export const SWITCH_LIMIT_ORDER = "0x2afBf0aB8d958a0227742F7a8BdA00c96372E4D7";
 
 /**
  * Previous production SwitchLimitOrder contract on PulseChain.
@@ -113,11 +117,15 @@ export const SWITCH_LIMIT_ORDER = "0x8e3881bdF81Fc0211383B2e576076B654F7aFD86";
 export const SWITCH_LIMIT_ORDER_V1 = "0x0e884072a891b406c0d814907a1e2310fe5f5deb";
 
 /**
- * Current production SwitchLimitOrder contract alias.
+ * Second production SwitchLimitOrder deployment, retained for legacy orders.
  *
  * Use this if you want explicit user-facing version naming in integrations.
  */
-export const SWITCH_LIMIT_ORDER_V2 = SWITCH_LIMIT_ORDER;
+export const SWITCH_LIMIT_ORDER_V2 =
+  "0x8e3881bdF81Fc0211383B2e576076B654F7aFD86";
+
+/** Current protected production SwitchLimitOrder contract alias. */
+export const SWITCH_LIMIT_ORDER_V3 = SWITCH_LIMIT_ORDER;
 
 /**
  * SwitchPLSFlow contract address on PulseChain.
@@ -126,10 +134,10 @@ export const SWITCH_LIMIT_ORDER_V2 = SWITCH_LIMIT_ORDER;
  * which wraps to WPLS and creates the limit order on their behalf.
  * No EIP-712 signing required — single transaction.
  *
- * This is the current production PLSFlow contract.
- * For integrators, treat this as user-facing V2.
+ * This is the current protected production PLSFlow contract.
+ * For integrators, treat this as user-facing V3.
  */
-export const SWITCH_PLS_FLOW = "0xCf5606bdC750d8626Cec32CA2E1BB207968db1D5";
+export const SWITCH_PLS_FLOW = "0x0362177FF2ad25a33a879c881a5055575C63a4cE";
 
 /**
  * Previous production SwitchPLSFlow contract on PulseChain.
@@ -139,11 +147,31 @@ export const SWITCH_PLS_FLOW = "0xCf5606bdC750d8626Cec32CA2E1BB207968db1D5";
 export const SWITCH_PLS_FLOW_V1 = "0x88c9e2C83b6B7c707602e548481e58E920694E64";
 
 /**
- * Current production SwitchPLSFlow contract alias.
+ * Second production SwitchPLSFlow deployment, retained for legacy orders.
  *
  * Use this if you want explicit user-facing version naming in integrations.
  */
-export const SWITCH_PLS_FLOW_V2 = SWITCH_PLS_FLOW;
+export const SWITCH_PLS_FLOW_V2 =
+  "0xCf5606bdC750d8626Cec32CA2E1BB207968db1D5";
+
+/** Current protected production SwitchPLSFlow contract alias. */
+export const SWITCH_PLS_FLOW_V3 = SWITCH_PLS_FLOW;
+
+/** Direct-fill market-price guard bound to the current PulseChain Router. */
+export const SWITCH_DIRECT_FILL_QUOTER =
+  "0x23A95b0f69c993CFe6180a266A93F7560102e929";
+
+/** Router adapter for current protected limit-order liquidity (adapter index 17). */
+export const SWITCH_LIMIT_ORDER_ADAPTER =
+  "0x7B9761484301a8FE4a2BA47194F7646eEF8e1cDd";
+
+/** Narrow PulseChain bridge used to add and remove limit-order operators. */
+export const LIMIT_ORDER_ADMIN =
+  "0x9C8B9012AfC0489dE612F7039665212EB88be127";
+
+/** PulseChain paid operator-seat and adapter-access registry. */
+export const OPERATOR_ACCESS_REGISTRY =
+  "0x7dA1AB04A712479569cCaD783Ca6114b763e36Ad";
 
 // ── Limit Order API endpoints ───────────────────────────────────────────────
 
@@ -166,6 +194,15 @@ export const FEE_DENOMINATOR = 10_000;
 
 /** Maximum allowed fee (basis points). 100 bps = 1% */
 export const MAX_FEE_BPS = 100;
+
+/** Current regular-swap protocol fee on PulseChain and Robinhood Chain. */
+export const DEFAULT_SWAP_FEE_BPS = 10;
+
+/** Current limit-order protocol fee on both supported networks. */
+export const LIMIT_ORDER_FEE_BPS = 30;
+
+/** Maximum operator excess retained by protected limit-order contracts. */
+export const MAX_OPERATOR_EXCESS_BPS = 500;
 
 /** Maximum allowed slippage (basis points). 5000 bps = 50% */
 export const MAX_SLIPPAGE_BPS = 5_000;
@@ -314,6 +351,12 @@ export const LIMIT_ORDER_EIP712_TYPES = {
  * The full ABI is available at `@switch-win/sdk/abi/limit-order`.
  */
 export const LIMIT_ORDER_ABI = [
+  "function SWITCH_ROUTER() view returns (address)",
+  "function MAX_OPERATOR_EXCESS_BPS() view returns (uint256)",
+  "function getFee() view returns (uint256)",
+  "function operatorGateEnabled() view returns (bool)",
+  "function directFillQuoter() view returns (address)",
+  "function plsFlowContract() view returns (address)",
   "function invalidateNonce(uint256 _nonce) external",
   "function invalidateNonces(uint256[] calldata _nonces) external",
   "function isNonceUsed(address maker, uint256 nonce) view returns (bool)",
@@ -334,6 +377,13 @@ export const LIMIT_ORDER_ERRORS = [
   "error InvalidTokens()",
   "error TransferFailed()",
   "error OperatorOnly()",
+  "error NativeFlowInputNotFullyConsumed()",
+  "error RouteTokenInMismatch()",
+  "error RouteTokenOutMismatch()",
+  "error InvalidDirectFillQuoter()",
+  "error DirectFillQuoteUnavailable()",
+  "error DirectFillPriceTooLow()",
+  "error OperatorManagerOnly()",
 ] as const;
 
 /**
@@ -356,6 +406,13 @@ export const LIMIT_ORDER_ERROR_SELECTORS: Record<string, string> = {
   "0x672215de": "InvalidTokens",
   "0x90b8ec18": "TransferFailed",
   "0xae5e3e00": "OperatorOnly",
+  "0x42e89a78": "NativeFlowInputNotFullyConsumed",
+  "0x54346455": "RouteTokenInMismatch",
+  "0xa587e83b": "RouteTokenOutMismatch",
+  "0xdcd56106": "InvalidDirectFillQuoter",
+  "0x0e4c7aa9": "DirectFillQuoteUnavailable",
+  "0xca8ecf0e": "DirectFillPriceTooLow",
+  "0xb68f3df5": "OperatorManagerOnly",
 };
 
 /**
@@ -368,22 +425,54 @@ export const LIMIT_ORDER_ERROR_SELECTORS: Record<string, string> = {
 export const PLS_FLOW_ABI = [
   "function createOrder(address tokenOut, uint256 minAmountOut, uint256 deadline, bool feeOnOutput, bool unwrapOutput, address partnerAddress) payable returns (uint256 nonce)",
   "function cancelOrder(uint256 nonce) external",
-  "function orderNonces(address owner) view returns (uint256)",
-  "event PLSOrderCreated(address indexed owner, uint256 indexed nonce, address tokenOut, uint256 amountIn, uint256 minAmountOut, uint256 deadline, bool feeOnOutput, bool unwrapOutput, address partnerAddress)",
+  "function getOrder(uint256 nonce) view returns (tuple(address originalMaker, address tokenOut, uint256 amountIn, uint256 minAmountOut, uint256 deadline, uint256 createdAt, bool feeOnOutput, bool unwrapOutput, bool active, address recipient, address partnerAddress))",
+  "function globalNonceCounter() view returns (uint256)",
+  "function getGlobalNonce() view returns (uint256)",
+  "function orderCreationEnabled() view returns (bool)",
+  "function isOrderActive(uint256 nonce) view returns (bool)",
+  "function totalLockedWPLS() view returns (uint256)",
+  "function SWITCH_LIMIT_ORDER() view returns (address)",
+  "function SWITCH_ROUTER() view returns (address)",
+  "function WNATIVE() view returns (address)",
+  "event PLSOrderCreated(address indexed originalMaker, uint256 indexed nonce, address tokenOut, uint256 amountIn, uint256 minAmountOut, uint256 deadline, address recipient)",
+  "event PLSOrderCancelled(address indexed originalMaker, uint256 indexed nonce, uint256 refundAmount)",
+  "event PLSOrderFilled(address indexed originalMaker, uint256 indexed nonce, uint256 amountIn)",
+  "event PLSOrderInputExcessRefunded(address indexed originalMaker, uint256 indexed nonce, uint256 amount)",
+  "event OrderCreationEnabledUpdated(bool enabled)",
 ] as const;
 
 /**
  * SwitchPLSFlow custom error signatures for decoding reverts.
  */
 export const PLS_FLOW_ERRORS = [
-  "error ZeroAmountIn()",
-  "error InvalidTokenOut()",
+  "error ZeroAmount()",
+  "error InvalidToken()",
+  "error OrderNotActive()",
+  "error NotOrderOwner()",
+  "error TransferFailed()",
+  "error OrderAlreadyFilled()",
+  "error AccountingMismatch()",
+  "error OrderNotEligibleForAdminCancel()",
+  "error OnlyLimitOrder()",
+  "error OrderNotFilled()",
+  "error InvalidDeadline()",
+  "error OrderCreationDisabled()",
 ] as const;
 
 /**
  * 4-byte error selectors for SwitchPLSFlow reverts.
  */
 export const PLS_FLOW_ERROR_SELECTORS: Record<string, string> = {
-  "0x990965c1": "ZeroAmountIn",
-  "0x1b6d1fa0": "InvalidTokenOut",
+  "0x1f2a2005": "ZeroAmount",
+  "0xc1ab6dc1": "InvalidToken",
+  "0x1d4ecc5b": "OrderNotActive",
+  "0xf6412b5a": "NotOrderOwner",
+  "0x90b8ec18": "TransferFailed",
+  "0xee3b3d4b": "OrderAlreadyFilled",
+  "0xc5ec2f3b": "AccountingMismatch",
+  "0x40db5c93": "OrderNotEligibleForAdminCancel",
+  "0x08ff2059": "OnlyLimitOrder",
+  "0x789bae35": "OrderNotFilled",
+  "0x769d11e4": "InvalidDeadline",
+  "0x86ec3378": "OrderCreationDisabled",
 };

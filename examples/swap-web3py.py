@@ -72,7 +72,7 @@ FROM_TOKEN = "0xA1077a294dDE1B09bB078844df40758a5D0f9a27"  # WPLS
 TO_TOKEN = "0x95B303987A60C71504D99Aa1b13B4DA07b0790ab"  # PLSX
 AMOUNT = 1000 * 10**18  # 1000 WPLS in wei
 SLIPPAGE_BPS = 100  # 1%
-FEE_BPS = 30  # 0.30%
+FEE_BPS = 10  # 0.10%
 PARTNER_ADDRESS = None  # your partner wallet or None
 RECEIVER_ADDRESS = None  # custom recipient address or None to send to sender
 

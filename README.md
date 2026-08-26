@@ -230,7 +230,7 @@ The SwitchRouter contract supports two fee modes:
 - **`feeOnOutput=true`** — The full input is routed through DEX pools, then the protocol fee is deducted from the output.
 - **`feeOnOutput=false`** — The protocol fee is deducted from the input *before* routing, and the reduced amount enters the DEX pools.
 
-Due to AMM curve concavity (Jensen's inequality), `AMM(amount × 0.9975) ≠ AMM(amount) × 0.9975`. This means the backend **must know which mode you'll use** to compute an exact `expectedOutputAmount`. If the backend routes as `feeOnOutput=true` but you send the `tx` (fee on input), the expected output will be slightly over-estimated (always in the user's favor — they receive more than quoted).
+Due to AMM curve concavity (Jensen's inequality), `AMM(amount × 0.999) ≠ AMM(amount) × 0.999`. This means the backend **must know which mode you'll use** to compute an exact `expectedOutputAmount`. If the backend routes as `feeOnOutput=true` but you send the `tx` (fee on input), the expected output will be slightly over-estimated (always in the user's favor — they receive more than quoted).
 
 By passing `feeOnOutput` explicitly, the backend adjusts routing to match the actual on-chain execution, giving you a spot-on estimate.
 
@@ -421,11 +421,11 @@ curl -H "x-api-key: YOUR_KEY" "https://quote.switch.win/swap/adapters?network=pu
     { "index": 10, "name": "pDexV3",          "address": "0xb718836aca6ddb8745a0cecc687467dda648bdf2" },
     { "index": 11, "name": "DextopV3",        "address": "0x8b8024ca2a4fdb34697620b80320e76c41a67124" },
     { "index": 12, "name": "Phux",            "address": "0x98ae0249da42f789b9745b248d346a727f37e937" },
-    { "index": 13, "name": "Tide",            "address": "0xf72c3a301b533eff7e3efa32549f9c934a4f4b29" },
+    { "index": 13, "name": "Tide",            "address": "0xd9a17779db4173d099064e26a5d5916717dacf5" },
     { "index": 14, "name": "PulseXStable",    "address": "0xf3b9742c859d089b6a2e3b3228dabb2c842b57d2" },
     { "index": 15, "name": "AgoraX",          "address": "0x79ea0ec76b510d08bf4ca9a4a53a1f9f80ea1697" },
     { "index": 16, "name": "JoltOTC",         "address": "0x033372eb8df4baad260e20d716742a825f1f113f" },
-    { "index": 17, "name": "SwitchLimitOrder", "address": "0xa799f49dcdec9056293187faa5f6f3727942a4ca" },
+    { "index": 17, "name": "SwitchLimitOrder", "address": "0x7b9761484301a8fe4a2ba47194f7646eef8e1cdd" },
     { "index": 18, "name": "SwitchX",         "address": "0xf8744452598883792f235b92452127f4a8587db3" },
     { "index": 19, "name": "LibertySwapV3",   "address": "0xba24bb413ab32f02073385850907ebcf0a357e70" },
     { "index": 20, "name": "FinvestaV3",      "address": "0x012c44d0c465819ef3ceac208e0c1b272087a8b4" },
@@ -598,7 +598,7 @@ Returns the optimal split-route for a swap and (optionally) a ready-to-send tran
 | `sender` | No* | address | — | Sender wallet address. **Required to receive `tx` calldata in the response.** |
 | `receiver` | No | address | `sender` | Custom recipient address. If omitted, output tokens are sent to `sender`. |
 | `slippage` | No | integer | `50` | Slippage tolerance in **basis points** (bps). `50` = 0.50 %. Range: `0`–`5000`. |
-| `fee` | No | integer | `30` | Protocol fee in basis points (0.30 %). Range: `30`–`100`. Defaults to `30` if omitted. |
+| `fee` | No | integer | `10` | Protocol fee in basis points (0.10 %). Range: `10`–`100`. Defaults to `10` if omitted. |
 | `partnerAddress` | No | address | `0x0…0` | Your partner wallet to receive 50 % of collected fees. Omit or pass `0x0` for no partner. |
 | `feeOnOutput` | No | string | `"false"` | Controls fee mode. `"true"` = fee deducted from output. `"false"` = fee deducted from input (default). Affects `expectedOutputAmount` accuracy — see [Swap Integration Flow](#swap-integration-flow). |
 | `adapters` | No | string | — | Comma-separated adapter indices to restrict routing (e.g. `"3"` for PulseXV2 only, `"3,7"` for PulseXV2 + UniswapV3). Get available indices from [List Adapters](#list-adapters). |
@@ -608,7 +608,7 @@ Returns the optimal split-route for a swap and (optionally) a ready-to-send tran
 #### Example Request
 
 ```
-GET /swap/quote?network=pulsechain&from=0xA1077a294dDE1B09bB078844df40758a5D0f9a27&to=0x95B303987A60C71504D99Aa1b13B4DA07b0790ab&amount=1000000000000000000&sender=0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045&slippage=100&fee=30&partnerAddress=0xYourPartnerWallet&feeOnOutput=true
+GET /swap/quote?network=pulsechain&from=0xA1077a294dDE1B09bB078844df40758a5D0f9a27&to=0x95B303987A60C71504D99Aa1b13B4DA07b0790ab&amount=1000000000000000000&sender=0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045&slippage=100&fee=10&partnerAddress=0xYourPartnerWallet&feeOnOutput=true
 ```
 
 #### Example Response
@@ -680,13 +680,13 @@ GET /swap/quote?network=pulsechain&from=0xA1077a294dDE1B09bB078844df40758a5D0f9a
   // Transaction object — only present when `sender` is provided
   // ⚠️ Always use tx.to from this response — do NOT hardcode the router address
   "tx": {
-    "to": "0x0305fcb5dA680EA6fd1B01A96C1949175B99d406",
+    "to": "0x2dFc8B6e13fF7F04e37Ef97006084805D65a6F19",
     "data": "0x...",     // ABI-encoded goSwitch() calldata with feeOnOutput = false
     "value": "0"          // "0" for ERC-20 input; amountIn for native-currency input
   },
   // Same swap but with fee taken from the output token instead
   "txFeeOnOutput": {
-    "to": "0x0305fcb5dA680EA6fd1B01A96C1949175B99d406",
+    "to": "0x2dFc8B6e13fF7F04e37Ef97006084805D65a6F19",
     "data": "0x...",     // ABI-encoded goSwitch() calldata with feeOnOutput = true
     "value": "0"
   }
@@ -836,7 +836,7 @@ Errors are returned as JSON with an `error` field:
 | `"Amount must be greater than 0"` | `amount` is zero or negative |
 | `"Amount exceeds maximum allowed value"` | `amount` exceeds 10²⁷ (1 billion tokens @ 18 decimals) |
 | `"Slippage must be a number between 0 and 5000 (basis points)"` | `slippage` out of range |
-| `"Fee must be a number between 30 and 100 (basis points). Minimum fee is 0.30%."` | `fee` out of range or below minimum |
+| `"Fee must be a number between 10 and 100 (basis points). Minimum fee is 0.10%."` | `fee` out of range or below minimum |
 | `"receiver must be a valid Ethereum address (0x + 40 hex chars)"` | Malformed receiver address |
 | `"partnerAddress must be a valid Ethereum address (0x + 40 hex chars)"` | Malformed partner address |
 | `"Failed to find route"` | No viable swap path exists, or route computation timed out (30s limit) |
@@ -866,7 +866,7 @@ If the swap transaction reverts on-chain, the SwitchRouter contract returns one 
 
 Switch supports a **50/50 fee-sharing** model for integration partners:
 
-1. Set a `fee` (e.g. `30` = 0.30 %, minimum `30` = 0.30 %) and your `partnerAddress` when calling the API.
+1. Set a `fee` (e.g. `10` = 0.10 %, the current minimum) and your `partnerAddress` when calling the API.
 2. The SwitchRouter contract automatically splits collected fees **during the swap**:
    - **50 %** sent to the protocol
    - **50 %** sent directly to your `partnerAddress`
@@ -969,11 +969,18 @@ Robinhood constants are available from
 | Name | Value |
 |---|---|
 | **Chain** | PulseChain (Chain ID `369`); Robinhood Chain uses ID `4663` and network-specific exports |
-| **SwitchRouter** | `0x0305fcb5dA680EA6fd1B01A96C1949175B99d406` |
-| **SwitchLimitOrder** (V2 — current) | `0x8e3881bdF81Fc0211383B2e576076B654F7aFD86` |
+| **SwitchRouter** (current) | `0x2dFc8B6e13fF7F04e37Ef97006084805D65a6F19` |
+| **SwitchRouter** (legacy) | `0x0305fcb5dA680EA6fd1B01A96C1949175B99d406` |
+| **SwitchLimitOrder** (V3 — current protected) | `0x2afBf0aB8d958a0227742F7a8BdA00c96372E4D7` |
+| **SwitchLimitOrder** (V2 — legacy) | `0x8e3881bdF81Fc0211383B2e576076B654F7aFD86` |
 | **SwitchLimitOrder** (V1 — legacy) | `0x0e884072a891b406C0D814907A1E2310fE5F5Deb` |
-| **SwitchPLSFlow** (V2 — current) | `0xCf5606bdC750d8626Cec32CA2E1BB207968db1D5` |
+| **SwitchPLSFlow** (V3 — current protected) | `0x0362177FF2ad25a33a879c881a5055575C63a4cE` |
+| **SwitchPLSFlow** (V2 — legacy) | `0xCf5606bdC750d8626Cec32CA2E1BB207968db1D5` |
 | **SwitchPLSFlow** (V1 — legacy) | `0x88c9e2C83b6B7c707602e548481e58E920694E64` |
+| **Direct-fill quoter** | `0x23A95b0f69c993CFe6180a266A93F7560102e929` |
+| **Limit-order adapter** | Index `17`; `0x7B9761484301a8FE4a2BA47194F7646eEF8e1cDd` |
+| **LimitOrderAdmin** | `0x9C8B9012AfC0489dE612F7039665212EB88be127` |
+| **OperatorAccessRegistry** | `0x7dA1AB04A712479569cCaD783Ca6114b763e36Ad` |
 | **Native PLS sentinel** | `0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE` |
 | **WPLS** | `0xA1077a294dDE1B09bB078844df40758a5D0f9a27` |
 | **Finvesta V3 adapter** | Index `20`; `0x012c44d0C465819eF3CeAC208e0c1B272087a8b4` (not transfer-tax safe) |
@@ -987,7 +994,9 @@ Robinhood constants are available from
 | **Fee denominator** | `10000` (basis points) |
 | **Max slippage** | `5000` bps (50 %) |
 | **Max fee** | `100` bps (1 %) |
-| **Min fee** | `30` bps (0.30 %) — enforced on-chain by `MIN_FEE` |
+| **Regular swap fee** | `10` bps (0.10 %) — enforced on-chain by `MIN_FEE` |
+| **Limit-order fee** | `30` bps (0.30 %); the LimitOrder is Router-fee-exempt |
+| **Maximum operator excess** | `500` bps (5 %) of the protected contract's cap base |
 | **Default slippage** | `50` bps (0.50 %) |
 | **Swap API base** | `https://quote.switch.win` |
 | **Limit Order API base** | `https://quote.switch.win` |

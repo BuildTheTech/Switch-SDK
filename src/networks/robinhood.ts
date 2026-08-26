@@ -23,14 +23,20 @@ export const ROBINHOOD_NATIVE_ETH =
 /** Switch contracts deployed on Robinhood Chain. */
 export const ROBINHOOD_SWITCH_CONTRACTS = {
   /** ERC-20 approval target. Use quote.tx.to when submitting a swap. */
-  router: "0x8730C3e2cF2c8CDa8E6166837A1Ed26f46aa9E59",
+  router: "0x8b2bBdF41C1486b3482bD0e9603d72f012EE8599",
+  legacyRouter: "0x8730C3e2cF2c8CDa8E6166837A1Ed26f46aa9E59",
+  /** Legacy view remains bound to the legacy Router; prefer hosted API quotes. */
   routerView: "0xFF6b56d3F444eB5b7FA1db047F57140C84810376",
-  limitOrder: "0x752c50DDd3B426cAE3D7A995F313Ac74ac6B0230",
-  nativeEthFlow: "0x029FfC6aF9112eA078f1D6f4a98826DDB2136cf6",
+  limitOrder: "0x1E05115387f314398bbb1A808B25308E71150396",
+  legacyLimitOrder: "0x752c50DDd3B426cAE3D7A995F313Ac74ac6B0230",
+  nativeEthFlow: "0x8170a3B0e2FD2e4333E0Ca9c9414B2D3dd6aF689",
+  legacyNativeEthFlow: "0x029FfC6aF9112eA078f1D6f4a98826DDB2136cf6",
+  directFillQuoter: "0x77b246C127c3c501Ec2836A2B53B555208b30B44",
   uniswapV2Adapter: "0x7a14d7A8509a66209D4332843b983b29bF5604A4",
   uniswapV3Adapter: "0xbcA08f296d9Ba0dc19Aa0E05D355365cE29A3205",
   uniswapV4Adapter: "0xB9885d3C55e79499bf887F2fBe445e01A8cFFf1c",
-  limitOrderAdapter: "0x412F625072c10e58C619D1e0b3C95cd3d5689871",
+  limitOrderAdapter: "0xb13CC4C37e1C609617C51B5dCDf8e4Ae5721Faa4",
+  legacyLimitOrderAdapter: "0x412F625072c10e58C619D1e0b3C95cd3d5689871",
   swapHoodV2Adapter: "0x6D8746f02e52944c13824fA691c6f4186E463354",
   swapHoodV3Adapter: "0x9645dE0AcB48F0AAefdBEb423F0558457907DE98",
   up33Adapter: "0x388179D2FB0ABcE9b03068916aF8a3c4dfD023c8",
@@ -60,7 +66,7 @@ export interface RobinhoodAdapter {
 }
 
 /**
- * Snapshot of the ordered production adapter registry verified on 2026-08-09.
+ * Snapshot of the ordered production adapter registry verified on 2026-08-25.
  *
  * Adapter registration can change. Fetch
  * `GET /swap/adapters?network=robinhood` when runtime freshness matters.

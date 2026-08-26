@@ -48,7 +48,7 @@ const FROM_TOKEN = "0xA1077a294dDE1B09bB078844df40758a5D0f9a27"; // WPLS
 const TO_TOKEN = "0x95B303987A60C71504D99Aa1b13B4DA07b0790ab"; // PLSX
 const AMOUNT = ethers.parseUnits("1000", 18).toString(); // 1000 WPLS
 const SLIPPAGE_BPS = 100; // 1%
-const FEE_BPS = 30; // 0.30%
+const FEE_BPS = 10; // 0.10%
 const PARTNER_ADDRESS = "0x0000000000000000000000000000000000000000"; // your partner wallet
 const RECEIVER_ADDRESS = ""; // custom recipient address, or "" to send to sender
 

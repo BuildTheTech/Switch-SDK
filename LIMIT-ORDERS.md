@@ -6,8 +6,8 @@
 
 | API network | Chain ID | Native currency | Current limit-order contract | Native flow contract |
 |---|---:|---|---|---|
-| `pulsechain` | 369 | PLS | `0x8e3881bdF81Fc0211383B2e576076B654F7aFD86` | `0x88c9e2C83b6B7c707602e548481e58E920694E64` |
-| `robinhood` | 4663 | ETH | `0x752c50DDd3B426cAE3D7A995F313Ac74ac6B0230` | `0x029FfC6aF9112eA078f1D6f4a98826DDB2136cf6` |
+| `pulsechain` | 369 | PLS | `0x2afBf0aB8d958a0227742F7a8BdA00c96372E4D7` | `0x0362177FF2ad25a33a879c881a5055575C63a4cE` |
+| `robinhood` | 4663 | ETH | `0x1E05115387f314398bbb1A808B25308E71150396` | `0x8170a3B0e2FD2e4333E0Ca9c9414B2D3dd6aF689` |
 
 Pass `network: "pulsechain"` or `network: "robinhood"` to every SDK API
 helper. Call `fetchLimitOrderConfig({ network })` at startup and treat its
@@ -243,6 +243,8 @@ native-currency neutral:
 - **No EIP-712 signature** — the contract creates the order on-chain immediately
 - **Single transaction** — wrap + approve + place order all in one tx
 - **Fully indexed** — the backend discovers orders via `PLSOrderCreated` events
+- **Drain-mode capable** — maintainers can disable new native deposits without
+  blocking fills or cancellations of existing orders
 
 ### Native-flow contract address
 
@@ -250,7 +252,7 @@ native-currency neutral:
 import { getNativeFlowAddress, PLS_FLOW_ABI } from "@switch-win/sdk";
 
 const robinhoodNativeFlow = getNativeFlowAddress("robinhood");
-// "0x029FfC6aF9112eA078f1D6f4a98826DDB2136cf6"
+// "0x8170a3B0e2FD2e4333E0Ca9c9414B2D3dd6aF689"
 ```
 
 ### Creating a native ETH limit order on Robinhood
@@ -382,6 +384,22 @@ When `feeOnOutput=false`, the LO contract pulls all tokens to itself first — o
 When `feeOnOutput=true`, the Router pulls tokens directly from the maker. If an operator also tries to take excess input via the LO contract, that requires a second approval the maker typically hasn't granted — the transaction would simply revert. The operator loses gas; the maker loses nothing and the order remains active for another operator. In practice, operators use output-side profit for `feeOnOutput=true` orders.
 
 > **Impact on fillability:** `feeOnOutput=true` orders are still fully fillable, but operators have less flexibility. In tight-margin or low-liquidity situations, this *could* reduce the likelihood of a fill since operators cannot optimize their profit-taking strategy on both sides.
+
+### Protected settlement
+
+The current PulseChain and Robinhood deployments charge a 30 bps (0.30%)
+limit-order fee. They are exempt from the Router's separate 10 bps regular-swap
+fee, so the two fees are not stacked.
+
+For routed fills, operator-retained surplus is capped at 5%. Input-side profit
+is capped at 5% of executable input; output-side profit is capped at 5% of the
+signed `minAmountOut`. Any additional routing improvement is returned to the
+maker.
+
+Direct fills are protected by the configured `directFillQuoter`. The maker must
+receive at least the greater of the signed `minAmountOut` and 95% of the best
+current direct-adapter quote. A missing or zero protected quote fails closed,
+and any post-fee output sent above the protected floor belongs to the maker.
 
 ### Tax token decision guide
 
@@ -708,6 +726,7 @@ The EIP-712 domain and types must match the on-chain contract exactly:
     { name: "feeOnOutput",  type: "bool"    },
     { name: "recipient",    type: "address" },
     { name: "unwrapOutput", type: "bool"    },
+    { name: "partnerAddress", type: "address" },
   ]
 }
 ```
@@ -728,10 +747,15 @@ These are exported as `LIMIT_ORDER_EIP712_DOMAIN` and `LIMIT_ORDER_EIP712_TYPES`
 | `NonceAlreadyUsed()` | This nonce has already been filled or invalidated |
 | `OrderExpired()` | `block.timestamp > deadline` (and deadline > 0) |
 | `RouteInputExceedsMax()` | Route's total input exceeds the order's `amountIn` |
+| `NativeFlowInputNotFullyConsumed()` | Native-flow output-surplus route did not consume all executable input |
+| `RouteTokenInMismatch()` | A route does not start with the signed input token |
+| `RouteTokenOutMismatch()` | A route does not end with the signed output token |
+| `DirectFillQuoteUnavailable()` | The protected direct-fill quote is missing or zero |
+| `DirectFillPriceTooLow()` | The maker would receive less than the protected direct-fill floor |
 | `TransferFailed()` | Token transfer failed (insufficient balance or allowance) |
 
 ---
 
 *See also: [README.md](README.md) for swap API docs, constants, and general integration info.*
 
-*Last updated: July 2026*
+*Last updated: August 2026*
