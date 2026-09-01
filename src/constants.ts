@@ -420,10 +420,11 @@ export const LIMIT_ORDER_ERROR_SELECTORS: Record<string, string> = {
  *
  * Used for creating native PLS limit orders in a single transaction.
  * The contract wraps PLS to WPLS and places the limit order on behalf
- * of the sender.
+ * of the sender. `recipient` is required in calldata by current deployments;
+ * pass the zero address to default settlement to `msg.sender`.
  */
 export const PLS_FLOW_ABI = [
-  "function createOrder(address tokenOut, uint256 minAmountOut, uint256 deadline, bool feeOnOutput, bool unwrapOutput, address partnerAddress) payable returns (uint256 nonce)",
+  "function createOrder(address tokenOut, uint256 minAmountOut, uint256 deadline, bool feeOnOutput, bool unwrapOutput, address partnerAddress, address recipient) payable returns (uint256 nonce)",
   "function cancelOrder(uint256 nonce) external",
   "function getOrder(uint256 nonce) view returns (tuple(address originalMaker, address tokenOut, uint256 amountIn, uint256 minAmountOut, uint256 deadline, uint256 createdAt, bool feeOnOutput, bool unwrapOutput, bool active, address recipient, address partnerAddress))",
   "function globalNonceCounter() view returns (uint256)",

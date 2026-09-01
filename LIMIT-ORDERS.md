@@ -246,6 +246,12 @@ native-currency neutral:
 - **Drain-mode capable** — maintainers can disable new native deposits without
   blocking fills or cancellations of existing orders
 
+> **Current ABI:** native-flow deployments use the seven-argument
+> `createOrder(tokenOut, minAmountOut, deadline, feeOnOutput, unwrapOutput,
+> partnerAddress, recipient)` signature. The `recipient` argument must be
+> present in calldata; pass the zero address to default it to `msg.sender`.
+> The older six-argument selector is not compatible with current deployments.
+
 ### Native-flow contract address
 
 ```ts
