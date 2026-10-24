@@ -9,13 +9,14 @@ Demonstrates the full swap lifecycle:
   5. Send swap transaction
 
 Usage:
-    pip install web3 requests
+    python -m pip install -r requirements-examples.txt
     export SWITCH_API_KEY=your_key
     export PRIVATE_KEY=your_private_key
     python examples/swap-web3py.py
 
 Prerequisites:
-    pip install web3 requests
+    Python 3.14.9 (selected by .python-version)
+    python -m pip install -r requirements-examples.txt
 """
 
 import os

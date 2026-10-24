@@ -1,0 +1,4 @@
+-c requirements-examples-constraints.txt
+# Optional Python tooling; use the runtime selected by .python-version.
+requests==2.34.2
+web3==8.0.0

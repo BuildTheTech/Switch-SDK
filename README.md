@@ -1007,6 +1007,9 @@ Robinhood constants are available from
 
 Complete runnable examples are in the [`examples/`](examples/) directory:
 
+The Python example uses Python 3.14.9 (`.python-version`). Install its pinned
+dependencies with `python -m pip install -r requirements-examples.txt`.
+
 | File | Language | Description |
 |---|---|---|
 | [`swap-ethers.ts`](examples/swap-ethers.ts) | TypeScript | Full 5-step swap flow with ethers.js v6 (adapters → checkTax → quote → approve → send) |
