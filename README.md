@@ -5,7 +5,18 @@
 
 > **Official integration kit for the Switch DEX Aggregator on PulseChain and Robinhood Chain**
 
-Everything partners need to integrate Switch swaps and limit orders — API docs, TypeScript types, ABIs, constants, and ready-to-use examples.
+Everything partners need to integrate Switch swaps, limit orders, and GaslessSwitch — API docs, TypeScript types, ABIs, constants, and ready-to-use examples.
+
+**Version 1.3.0 has not been published on npm yet.** This release
+adds GaslessSwitch V2 helpers and examples. See [GASLESS.md](GASLESS.md) for the
+checked quote, approval, signing, submission, and recovery flow.
+
+**Gasless fee policy:** Every GaslessSwitch settlement charges a fixed
+**0.1% protocol fee (10 bps)**. Integrators cannot customize or waive this fee.
+The operator can also receive up to **0.05%**, including settlement gas, under
+the separate on-chain payout cap. If you do not want to offer the fixed gasless
+fee policy, **offer regular swaps only** in your integration. See
+[regular-only integration](GASLESS.md#regular-only-integration) for the steps.
 
 **Swap API:** `https://quote.switch.win` &nbsp;|&nbsp; **Swap chains:** PulseChain (369), Robinhood Chain (4663) &nbsp;|&nbsp; **Limit orders:** PulseChain and Robinhood Chain
 
@@ -55,6 +66,21 @@ Switch-SDK/
 ### Limit Orders
 
 8. [Limit Orders](#limit-orders) — full guide in [`LIMIT-ORDERS.md`](LIMIT-ORDERS.md)
+
+### Gasless swaps
+
+- [GaslessSwitch V2 integration](GASLESS.md) — settlement gas eligibility, tax
+  tokens, 0.1% protocol fee, 0.05% total operator cap, native wrapping,
+  durable pending orders, and settlement links.
+- [Browser flow example](examples/gasless-swap.ts),
+  [backend proxy](examples/gasless-nextjs-proxy.ts), and
+  [operator execution validation](examples/gasless-operator.ts).
+- Import the dedicated flow from `@switch-win/sdk/gasless`; ordinary
+  `buildLimitOrder` / LO signing and approval helpers target a different contract.
+- [API eligibility and fallback](GASLESS.md#api-eligibility-response):
+  `client.quote()` exposes `decision.eligibility` for both accepted and rejected
+  quotes, including PLS/ETH payout, gas reserves, freshness and rejection reason.
+  Only `decision.eligible` enables signing; a finished simulation alone does not.
 
 ### General
 
@@ -598,7 +624,7 @@ Returns the optimal split-route for a swap and (optionally) a ready-to-send tran
 | `sender` | No* | address | — | Sender wallet address. **Required to receive `tx` calldata in the response.** |
 | `receiver` | No | address | `sender` | Custom recipient address. If omitted, output tokens are sent to `sender`. |
 | `slippage` | No | integer | `50` | Slippage tolerance in **basis points** (bps). `50` = 0.50 %. Range: `0`–`5000`. |
-| `fee` | No | integer | `10` | Protocol fee in basis points (0.10 %). Range: `10`–`100`. Defaults to `10` if omitted. |
+| `fee` | No | integer | `10` | Regular swap protocol fee in basis points. Range: `10`–`100`; defaults to `10`. Gasless quotes require exactly `10` for the fixed 0.1% settlement fee; see [gasless fee policy](GASLESS.md#fixed-gasless-fee). |
 | `partnerAddress` | No | address | `0x0…0` | Your partner wallet to receive 50 % of collected fees. Omit or pass `0x0` for no partner. |
 | `feeOnOutput` | No | string | `"false"` | Controls fee mode. `"true"` = fee deducted from output. `"false"` = fee deducted from input (default). Affects `expectedOutputAmount` accuracy — see [Swap Integration Flow](#swap-integration-flow). |
 | `adapters` | No | string | — | Comma-separated adapter indices to restrict routing (e.g. `"3"` for PulseXV2 only, `"3,7"` for PulseXV2 + UniswapV3). Get available indices from [List Adapters](#list-adapters). |

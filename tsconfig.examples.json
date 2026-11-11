@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "rootDir": ".", "noEmit": true },
+  "include": [
+    "src/**/*.ts",
+    "examples/gasless-swap.ts",
+    "examples/gasless-nextjs-proxy.ts",
+    "examples/gasless-operator.ts"
+  ],
+  "exclude": ["node_modules", "dist"]
+}

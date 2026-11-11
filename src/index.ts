@@ -52,6 +52,12 @@ export type {
 
 export { isErrorResponse } from "./types.js";
 
+// Dedicated GaslessSwitch V2 integration (separate from ordinary limit orders).
+export * from "./gasless.js";
+export * from "./gasless-client.js";
+export * from "./gasless-store.js";
+export * from "./gasless-operators.js";
+
 // Constants — Swap
 export {
   API_BASE,

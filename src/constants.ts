@@ -195,7 +195,9 @@ export const FEE_DENOMINATOR = 10_000;
 /** Maximum allowed fee (basis points). 100 bps = 1% */
 export const MAX_FEE_BPS = 100;
 
-/** Current regular-swap protocol fee on PulseChain and Robinhood Chain. */
+/** Default integration quote fee. The Switch frontend may explicitly request
+ * a higher Regular fee; display protocolFeeBps returned by the selected quote.
+ * GaslessSwitch has its own fixed fee and dedicated quote flow. */
 export const DEFAULT_SWAP_FEE_BPS = 10;
 
 /** Current limit-order protocol fee on both supported networks. */

@@ -62,6 +62,15 @@ export interface BestPathResponse {
    * the output token). See the README for recommended strategies.
    */
   txFeeOnOutput?: SwapTransaction;
+  /** Transaction matching the requested fee mode. Never broadcast this for a gasless order. */
+  selectedTx?: SwapTransaction;
+  protocolFeeBps?: number;
+  feeOnOutput?: boolean;
+  quoteGasPrice?: string;
+  quoteBlockNumber?: number;
+  gaslessExecution?: import("./gasless-types.js").GaslessPreviewResult;
+  /** Conservative server recommendation; normal quotes report not_checked. */
+  gaslessEligibility?: import("./gasless-types.js").GaslessEligibility;
   /**
    * Transfer tax info for the input token.
    * Present when the API detects whether the token has a fee-on-transfer mechanism.
@@ -448,6 +457,22 @@ export interface LimitOrderStats {
 /** Response from `GET /limit-orders/config`. */
 export interface LimitOrderConfigResponse {
   limitOrderContract: string;
+  limitOrderRouter?: string | null;
+  gaslessContract?: string | null;
+  gaslessSettlementVersion?: number;
+  gaslessTaxTokensSupported?: boolean;
+  gaslessApprovalSpender?: string | null;
+  gaslessProtocolFeeBps?: number;
+  gaslessMaxOperatorPayoutBps?: number;
+  gaslessEip712Domain?: {
+    name: string;
+    version: string;
+    chainId: number;
+    verifyingContract: string;
+  } | null;
+  orderSubmissionLimitOrderContracts?: string[];
+  otcRoutingLimitOrderContracts?: string[];
+  deprecatedLimitOrderContracts?: string[];
   allLimitOrderContracts: string[];
   plsFlowContract: string | null;
   allPlsFlowContracts: string[];

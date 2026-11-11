@@ -161,7 +161,10 @@ Use `ROBINHOOD_TOKENS.WETH.address` for the wrapped ERC-20:
 Native ETH does not require approval. WETH and every other ERC-20 input token
 must be approved for `ROBINHOOD_SWITCH_CONTRACTS.router`.
 
-The current Router charges 10 bps (0.10%) for regular swaps. The protected
+The current Router's minimum is 10 bps (0.10%). The current Switch frontend
+explicitly requests 15 bps for Regular swaps; use the quote's actual fee for
+display. GaslessSwitch independently charges 10 bps; see [GASLESS.md](GASLESS.md).
+The protected
 LimitOrder charges 30 bps (0.30%) and is Router-fee-exempt, so the fees do not
 stack. It also caps operator excess at 5% and checks direct fills against its
 Router-bound market-price quoter.

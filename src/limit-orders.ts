@@ -52,6 +52,12 @@ import {
   ROBINHOOD_SWITCH_CONTRACTS,
   ROBINHOOD_TOKENS,
 } from "./networks/robinhood.js";
+import { GASLESS_DEPLOYMENTS, GASLESS_LEGACY_CONTRACTS } from "./gasless.js";
+
+const gaslessContracts = new Set([
+  ...Object.values(GASLESS_DEPLOYMENTS).map(deployment => deployment.contract),
+  ...Object.values(GASLESS_LEGACY_CONTRACTS).flat(),
+].map(address => address.toLowerCase()));
 
 // ── Re-export EIP-712 constants for convenience ─────────────────────────────
 
@@ -196,6 +202,9 @@ export function getEIP712SigningParams(
   limitOrderContract?: string,
   chainId: number = 369,
 ) {
+  if (limitOrderContract && gaslessContracts.has(limitOrderContract.toLowerCase())) {
+    throw new Error("GaslessSwitch requires its dedicated signing domain. Use getGaslessSigningParams() for V2.");
+  }
   if (limitOrderContract) {
     return {
       domain: {
@@ -407,8 +416,10 @@ export function getNativeFlowAddress(
  * 1. Call `submitLimitOrder()` **immediately** after the user signs.
  * 2. **Await** the response and verify `success: true` before showing
  *    the order as "created" in your UI.
- * 3. If the POST fails, **retry** automatically (the backend is
- *    idempotent on `maker + nonce`, so retries are safe).
+ * 3. If the POST fails, first query the same maker + nonce and verify its
+ *    contract and every signed field. The backend rejects duplicate nonces;
+ *    it does not return an idempotent success. Retry only the identical payload,
+ *    preserving its nonce and signature while the order is still live.
  * 4. Do **not** navigate away or close the signing flow until the
  *    backend confirms the order.
  *

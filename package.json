@@ -1,7 +1,7 @@
 {
   "name": "@switch-win/sdk",
-  "version": "1.2.9",
-  "description": "Official integration kit for the Switch DEX Aggregator on PulseChain and Robinhood Chain",
+  "version": "1.3.0",
+  "description": "Switch swaps, limit orders, and GaslessSwitch V2 integrations on PulseChain and Robinhood Chain",
   "author": "BuildTheTech",
   "license": "MIT",
   "repository": {
@@ -21,26 +21,67 @@
     "sdk"
   ],
   "type": "module",
-  "main": "src/index.js",
-  "types": "src/index.d.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./types": "./src/types.ts",
-    "./constants": "./src/constants.ts",
-    "./networks": "./src/networks/index.ts",
-    "./networks/robinhood": "./src/networks/robinhood.ts",
-    "./limit-orders": "./src/limit-orders.ts",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./types": {
+      "types": "./dist/types.d.ts",
+      "default": "./dist/types.js"
+    },
+    "./constants": {
+      "types": "./dist/constants.d.ts",
+      "default": "./dist/constants.js"
+    },
+    "./networks": {
+      "types": "./dist/networks/index.d.ts",
+      "default": "./dist/networks/index.js"
+    },
+    "./networks/robinhood": {
+      "types": "./dist/networks/robinhood.d.ts",
+      "default": "./dist/networks/robinhood.js"
+    },
+    "./limit-orders": {
+      "types": "./dist/limit-orders.d.ts",
+      "default": "./dist/limit-orders.js"
+    },
+    "./gasless": {
+      "types": "./dist/gasless-index.d.ts",
+      "default": "./dist/gasless-index.js"
+    },
+    "./gasless/operators": {
+      "types": "./dist/gasless-operators.d.ts",
+      "default": "./dist/gasless-operators.js"
+    },
     "./abi": "./abi/SwitchRouterABI.json",
-    "./abi/limit-order": "./abi/SwitchLimitOrderABI.json"
+    "./abi/limit-order": "./abi/SwitchLimitOrderABI.json",
+    "./abi/gasless": "./abi/GaslessSwitchV2ABI.json"
   },
   "files": [
+    "dist/",
     "src/",
     "abi/",
+    "examples/",
+    "CHANGELOG.md",
     "README.md",
     "ROBINHOOD.md",
-    "LIMIT-ORDERS.md"
+    "LIMIT-ORDERS.md",
+    "GASLESS.md"
   ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.examples.json --noEmit",
+    "test": "npm run build && node --test test/*.test.mjs",
+    "check:gasless-live": "npm run build && node scripts/check-gasless-live.mjs",
+    "prepack": "npm run build"
+  },
   "devDependencies": {
     "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "ethers": "6.17.0"
   }
 }

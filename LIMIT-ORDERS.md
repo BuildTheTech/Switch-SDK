@@ -2,6 +2,10 @@
 
 > **Gasless EIP-712 signed limit orders on PulseChain and Robinhood Chain**
 
+This guide describes ordinary limit orders. The dedicated GaslessSwitch swap
+option has a separate domain, contract, fee, payout cap and approval target;
+use [GASLESS.md](GASLESS.md) and the dedicated SDK helpers for that flow.
+
 **Limit Order API:** `https://quote.switch.win`
 
 | API network | Chain ID | Native currency | Current limit-order contract | Native flow contract |
@@ -131,7 +135,9 @@ await submitLimitOrder(
 > Your integration must:
 > 1. Call `submitLimitOrder()` **immediately** after the user signs.
 > 2. **Await** the response and confirm `success: true` before showing "order created".
-> 3. **Retry** on transient failures — the backend is idempotent on `maker + nonce`.
+> 3. On a transient failure, look up that exact maker + nonce and verify its
+>    contract and signed fields. Duplicates return an error, not idempotent
+>    success. Retry only the original signed payload; never generate a new nonce.
 > 4. Do **not** navigate away or close the signing flow until the backend confirms.
 >
 > *Native PLS/ETH flow orders are the exception — they are recorded on-chain*
@@ -206,7 +212,7 @@ const result = await submitLimitOrder(
 );
 
 if ("error" in result) {
-  // Retry logic recommended here — the backend is idempotent on maker+nonce
+  // Look up the exact order before retrying the identical signed payload.
   console.error("Failed:", result.error);
 } else {
   console.log("Order created:", result.order.id);
@@ -536,7 +542,9 @@ Submit a signed limit order. The backend verifies the EIP-712 signature before s
 > Your integration must:
 > 1. Call `submitLimitOrder()` **immediately** after the user signs.
 > 2. **Await** the response and confirm `success: true` before showing "order created".
-> 3. **Retry** on transient failures — the backend is idempotent on `maker + nonce`.
+> 3. On a transient failure, look up that exact maker + nonce and verify its
+>    contract and signed fields. Duplicates return an error, not idempotent
+>    success. Retry only the original signed payload; never generate a new nonce.
 >
 > Native PLS/ETH flow orders are the exception — they are recorded on-chain first,
 > so the backend discovers them via event indexing even if the POST never arrives.
