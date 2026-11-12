@@ -1,6 +1,14 @@
-# 1.3.0 (unreleased)
+# 1.3.1 - 2026-11-11
 
-GaslessSwitch V2 release candidate; npm publication pending.
+- Clarify that frontends display expected gasless output as the main amount,
+  show the slippage-adjusted minimum separately, and sign that exact minimum.
+  Add field/editor guidance and update the browser example callback comments.
+- Refresh the release documentation to reflect the published 1.3.0 helpers.
+  Runtime behavior, fee policy and signed order construction are unchanged.
+
+# 1.3.0 - 2026-11-11
+
+GaslessSwitch V2 support.
 
 - Clarify the mandatory fixed 0.1% gasless protocol fee and the separate capped
   operator payout. Document regular-only integrations for partners who do not

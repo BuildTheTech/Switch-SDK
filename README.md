@@ -7,9 +7,9 @@
 
 Everything partners need to integrate Switch swaps, limit orders, and GaslessSwitch — API docs, TypeScript types, ABIs, constants, and ready-to-use examples.
 
-**Version 1.3.0 has not been published on npm yet.** This release
-adds GaslessSwitch V2 helpers and examples. See [GASLESS.md](GASLESS.md) for the
-checked quote, approval, signing, submission, and recovery flow.
+**Version 1.3.1 clarifies gasless output display and order signing.** GaslessSwitch
+V2 helpers and examples were introduced in 1.3.0. See [GASLESS.md](GASLESS.md)
+for the checked quote, approval, signing, submission, and recovery flow.
 
 **Gasless fee policy:** Every GaslessSwitch settlement charges a fixed
 **0.1% protocol fee (10 bps)**. Integrators cannot customize or waive this fee.
@@ -77,6 +77,9 @@ Switch-SDK/
   [operator execution validation](examples/gasless-operator.ts).
 - Import the dedicated flow from `@switch-win/sdk/gasless`; ordinary
   `buildLimitOrder` / LO signing and approval helpers target a different contract.
+- Show `prepared.expectedOutput` as the main output estimate, matching Regular.
+  Show `prepared.minAmountOut` separately as minimum received and use it for
+  order signing. See [display versus signing](GASLESS.md#expected-output-versus-signed-minimum).
 - [API eligibility and fallback](GASLESS.md#api-eligibility-response):
   `client.quote()` exposes `decision.eligibility` for both accepted and rejected
   quotes, including PLS/ETH payout, gas reserves, freshness and rejection reason.

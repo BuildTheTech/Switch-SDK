@@ -1,6 +1,6 @@
 # GaslessSwitch V2 integration
 
-**Unreleased version 1.3.0.** These helpers are not in the published npm package yet.
+GaslessSwitch V2 helpers are published in `@switch-win/sdk` version **1.3.0**.
 
 Gasless swaps use a dedicated settlement contract. A user approves that
 contract, signs an EIP-712 order, and submits the signature to the order API.
@@ -93,8 +93,9 @@ migration can use the client's `deployment` override after verifying it.
    approval cost. Wait for successful confirmation before signing.
 6. A Sign click owns refresh, visible quote update, signing, and POST. Freeze
    the trade intent while preparing/signing; abort on account, chain, pair,
-   amount, recipient, partner, or slippage changes. A changed refreshed minimum
-   is displayed before the wallet prompt and is the minimum actually signed.
+   amount, recipient, partner, or slippage changes. Update the main expected
+   output and the separate minimum received before the wallet prompt. The order
+   signs the refreshed minimum, while the main amount stays on expected output.
 7. Persist the pending order before opening the wallet. Persist the signature
    before POST. Keep the pending lock on uncertain submission. Never generate
    a replacement nonce merely because a request timed out. Block Regular and
@@ -135,7 +136,7 @@ if (!decision.eligible) {
   // Later, on the user's click, after any required approval:
   await client.signAndSubmit({
     trade, signer, store, displayed: decision.prepared,
-    onPrepared: displayQuote, // Includes any refreshed minimum before the prompt.
+    onPrepared: displayQuote, // Update main expected output and separate minimum before the prompt.
     onPending: displayOrderProgress,
   });
 }
@@ -286,6 +287,32 @@ new quotes. `operatorLivenessVerified: false` means the API does not prove a
 worker is online, even when an approved wallet has sufficient native funds.
 
 ## Amounts, fees, taxes, and slippage
+
+### Expected output versus signed minimum
+
+Use the same main output metric for Gasless and Regular: **expected output
+after costs, before the user's slippage allowance**.
+
+| SDK field | Frontend / signing use |
+| --- | --- |
+| `prepared.expectedOutput` | Main "Get" or "Expected output" amount, including the checked protocol fee, operator payout and token-tax effects. |
+| `prepared.minAmountOut` | Separate "Minimum received" amount after slippage, and the exact `minAmountOut` used in the signed order. |
+
+Keep the main field on `expectedOutput` while preparing and signing. Update
+both amounts in `onPrepared` when a stale quote refreshes, before the wallet
+prompt opens. Do not replace the main estimate with the lower minimum: that
+makes Gasless look worse than a Regular quote displaying its expected output.
+
+For example, a checked expected output of 1,000 tokens with 0.5% user slippage
+shows **1,000** in the main field and **995 minimum received** separately.
+The order signs **995**, so the operator can execute within that tolerance.
+
+Both fields are raw integer strings in output-token units. Format them using
+the token's decimals for display; never rebuild the signing minimum from a
+rounded display value or use `expectedOutput` as the order's `minAmountOut`.
+`signAndSubmit()` / `buildGaslessOrder()` already use the checked minimum.
+
+### Fee and tax calculations
 
 The regular quote fields describe its ordinary Router call. For the gasless
 UI use the checked `prepared.expectedOutput` and `prepared.minAmountOut`,

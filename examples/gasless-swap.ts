@@ -17,6 +17,8 @@ export async function createGaslessSwapFlow(
   wallet: Eip1193Provider,
   network: LimitOrderNetwork,
   ui: {
+    /** Main amount: prepared.expectedOutput. Separate minimum: prepared.minAmountOut.
+     * Format both with output-token decimals. The SDK signs the exact raw minimum. */
     showQuote(prepared: PreparedGaslessSwap): void;
     showRegular(reason: string): void;
     /** Optional PLS/ETH payout, gas reserve and reason-code display. */
@@ -78,7 +80,8 @@ export async function createGaslessSwapFlow(
         store,
         displayed,
         signal: controller.signal,
-        // The same click refreshes if necessary, updates the form, then opens the wallet.
+        // Refresh both amounts before the wallet opens: main expected output
+        // stays on prepared.expectedOutput; the SDK signs prepared.minAmountOut.
         onPrepared(prepared) {
           displayed = prepared;
           ui.showQuote(prepared);

@@ -497,7 +497,8 @@ export class GaslessSwapClient {
     store: GaslessPendingStore;
     displayed?: PreparedGaslessSwap;
     signal?: AbortSignal;
-    /** Update the visible amounts before the wallet prompt, including refreshed minimums. */
+    /** Before the wallet prompt, update the main expectedOutput estimate and
+     * separate minAmountOut display. Signing uses minAmountOut, not expectedOutput. */
     onPrepared?: (prepared: PreparedGaslessSwap) => void | Promise<void>;
     onPending?: (pending: PendingGaslessOrder) => void;
   }): Promise<LimitOrderRecord> {

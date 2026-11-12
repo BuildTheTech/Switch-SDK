@@ -164,7 +164,11 @@ export interface PreparedGaslessSwap {
   quote: GaslessQuoteResponse;
   preview: GaslessExecutionPreview;
   feeOnOutput: boolean;
+  /** Raw output-token units after checked costs, before user slippage.
+   * Show this as the main "Get" / expected output amount in the swap form. */
   expectedOutput: string;
+  /** Raw output-token units after user slippage. Show separately as minimum
+   * received; sign this exact value, never the expected or rounded display amount. */
   minAmountOut: string;
   payoutToken: string;
   operatorPayout: string;
